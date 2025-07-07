@@ -102,4 +102,36 @@ function toggleColumn(type, key) {
     }
 }
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
+
+    // 监听所有输入框
+    inputs.forEach((input, idx) => {
+        input.addEventListener("keydown", function(e) {
+            if (e.key === " ") {
+                e.preventDefault(); // 阻止空格滚动页面
+                if (idx + 1 < inputs.length) {
+                    inputs[idx + 1].focus();
+                }
+            }
+
+            // 如果是下注号码栏，按 Enter 跳到下一行同一栏
+            if (e.key === "Enter" && this.name.startsWith("number")) {
+                e.preventDefault();
+                const match = this.name.match(/^number(\d+)$/);
+                if (match) {
+                    const nextIndex = parseInt(match[1]) + 1;
+                    const nextInput = document.querySelector(`input[name="number${nextIndex}"]`);
+                    if (nextInput) {
+                        nextInput.focus();
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
+
 {% endblock %}
