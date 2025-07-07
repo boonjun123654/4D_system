@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>财务报表</h2>
+
+<form method="get">
+    <label for="date">选择日期：</label>
+    <input type="date" name="date">
+    <button type="submit">查询</button>
+</form>
+
+<br>
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>日期</th>
+            <th>下注总额 (RM)</th>
+            <th>佣金 (RM)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>2025-07-07</td>
+            <td>1020.00</td>
+            <td>30.60</td>
+        </tr>
+    </tbody>
+</table>
+{% endblock %}

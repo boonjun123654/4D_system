@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>4D 后台</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="/">赔率</a> |
+        <a href="/bet">下注</a> |
+        <a href="/report">财务报表</a> |
+        <a href="/history">查单</a>
+    </nav>
+    <hr>
+    {% block content %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>下注页面</h2>
+<form method="post">
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>下注号码</th>
+                <th>大</th>
+                <th>小</th>
+                <th>单A</th>
+                <th>千字A</th>
+                <th>千字</th>
+                <th>市场</th>
+                <th>种类</th>
+                <th>总额</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in range(1, 13) %}
+            <tr>
+                <td>{{ i }}</td>
+                <td><input type="text" name="number{{ i }}"></td>
+                <td><input type="text" name="big{{ i }}"></td>
+                <td><input type="text" name="small{{ i }}"></td>
+                <td><input type="text" name="a1{{ i }}"></td>
+                <td><input type="text" name="k1{{ i }}"></td>
+                <td><input type="text" name="k{{ i }}"></td>
+                <td>
+                    <select name="market{{ i }}">
+                        <option value="M">M</option>
+                        <option value="P">P</option>
+                        <option value="T">T</option>
+                        <option value="S">S</option>
+                        <option value="B">B</option>
+                        <option value="K">K</option>
+                        <option value="W">W</option>
+                        <option value="H">H</option>
+                        <option value="E">E</option>
+                    </select>
+                </td>
+                <td>
+                    <select name="type{{ i }}">
+                        <option>正字</option>
+                        <option>IBox</option>
+                    </select>
+                </td>
+                <td>0.00</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</form>
+{% endblock %}

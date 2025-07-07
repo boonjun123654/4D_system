@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>下注记录</h2>
+
+<form method="get">
+    <label for="date">选择日期：</label>
+    <input type="date" name="date">
+    <button type="submit">查看</button>
+</form>
+
+<br>
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>号码</th>
+            <th>金额</th>
+            <th>市场</th>
+            <th>种类</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>1</td>
+            <td>1234</td>
+            <td>10.00</td>
+            <td>M</td>
+            <td>正字</td>
+            <td><button>删除</button></td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>2233</td>
+            <td>5.00</td>
+            <td>T</td>
+            <td>IBox</td>
+            <td><button>删除</button></td>
+        </tr>
+    </tbody>
+</table>
+{% endblock %}
