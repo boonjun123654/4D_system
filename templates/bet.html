@@ -9,7 +9,6 @@
                 <th>下注号码</th>
                 <th>大</th>
                 <th>小</th>
-                <th>单A</th>
                 <th>千字A</th>
                 <th>千字</th>
                 <th>市场</th>
@@ -21,29 +20,31 @@
             {% for i in range(1, 13) %}
             <tr>
                 <td>{{ i }}</td>
-                <td><input type="text" name="number{{ i }}"></td>
-                <td><input type="text" name="big{{ i }}"></td>
-                <td><input type="text" name="small{{ i }}"></td>
-                <td><input type="text" name="a1{{ i }}"></td>
-                <td><input type="text" name="k1{{ i }}"></td>
-                <td><input type="text" name="k{{ i }}"></td>
+                <td>
+                    <input type="text" name="number{{ i }}" maxlength="4" pattern="\d{4}" style="width: 80px;">
+                </td>
+                <td><input type="text" name="big{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;"></td>
+                <td><input type="text" name="small{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;"></td>
+                <td><input type="text" name="k1{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;"></td>
+                <td><input type="text" name="k{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;"></td>
                 <td>
                     <select name="market{{ i }}">
                         <option value="M">M</option>
                         <option value="P">P</option>
                         <option value="T">T</option>
                         <option value="S">S</option>
+                        <option value="H">H</option>
+                        <option value="E">E</option>
                         <option value="B">B</option>
                         <option value="K">K</option>
                         <option value="W">W</option>
-                        <option value="H">H</option>
-                        <option value="E">E</option>
                     </select>
                 </td>
                 <td>
                     <select name="type{{ i }}">
                         <option>正字</option>
                         <option>IBox</option>
+                        <option>Box</option>
                     </select>
                 </td>
                 <td>0.00</td>
