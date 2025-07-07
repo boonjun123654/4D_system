@@ -18,10 +18,20 @@
             </tr>
             <tr>
                 {% for d in range(7) %}
-                    <th style="width:40px;">{{ (date_today + timedelta(days=d)).strftime("%-d/%-m") }}</th>
+                    <th style="width:40px;">
+                        <input type="checkbox" id="select_date_{{ d }}" onclick="toggleColumn('date', {{ d }})"><br>
+                        {{ (date_today + timedelta(days=d)).strftime("%-d/%-m") }}
+                    </th>
                 {% endfor %}
                 {% for m in ['M','P','T','S','B','K','W','H','E'] %}
-                    <th>{{ m }}</th>
+                    {% set bg = {
+                        'M': '#ffff00', 'P': '#0000ff', 'T': '#cc0000',
+                        'S': '#4c8ed1', 'B': '#e51d20', 'K': '#008835',
+                        'W': '#00540e', 'H': '#fed606', 'E': '#ffa500'
+                    }[m] %}
+                    <th style="background-color:{{ bg }};">
+                        <input type="checkbox" id="select_market_{{ m }}" onclick="toggleColumn('market', '{{ m }}')"><br>{{ m }}
+                    </th>
                 {% endfor %}
             </tr>
         </thead>
@@ -48,7 +58,7 @@
                            style="width: 40px;"></td>
 
                 {% for d in range(7) %}
-                    <td><input type="checkbox" name="date{{ i }}_{{ d }}" style="width:18px;height:18px;"></td>
+                    <td><input type="checkbox" name="date{{ i }}_{{ d }}" class="date_col_{{ d }}" style="width:18px;height:18px;"></td>
                 {% endfor %}
 
                 {% for m in ['M','P','T','S','B','K','W','H','E'] %}
@@ -58,7 +68,7 @@
                         'W': '#00540e', 'H': '#fed606', 'E': '#ffa500'
                     }[m] %}
                     <td style="background-color:{{ bg }};">
-                        <input type="checkbox" name="market{{ i }}_{{ m }}" style="width:18px;height:18px;">
+                        <input type="checkbox" name="market{{ i }}_{{ m }}" class="market_col_{{ m }}" style="width:18px;height:18px;">
                     </td>
                 {% endfor %}
 
@@ -75,4 +85,21 @@
         </tbody>
     </table>
 </form>
+
+<!-- ✅ JavaScript 脚本（放在页面底部） -->
+<script>
+function toggleColumn(type, key) {
+    let checkboxes;
+    if (type === 'date') {
+        checkboxes = document.querySelectorAll('.date_col_' + key);
+        const state = document.getElementById('select_date_' + key).checked;
+        checkboxes.forEach(cb => cb.checked = state);
+    }
+    if (type === 'market') {
+        checkboxes = document.querySelectorAll('.market_col_' + key);
+        const state = document.getElementById('select_market_' + key).checked;
+        checkboxes.forEach(cb => cb.checked = state);
+    }
+}
+</script>
 {% endblock %}
