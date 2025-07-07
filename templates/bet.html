@@ -18,7 +18,7 @@
             </tr>
             <tr>
                 {% for d in range(7) %}
-                    <th>{{ (date_today + timedelta(days=d)).strftime("%-d/%-m") }}</th>
+                    <th style="width:40px;">{{ (date_today + timedelta(days=d)).strftime("%-d/%-m") }}</th>
                 {% endfor %}
                 {% for m in ['M','P','T','S','B','K','W','H','E'] %}
                     <th>{{ m }}</th>
@@ -30,19 +30,36 @@
             <tr>
                 <td>{{ i }}</td>
                 <td>
-                    <input type="text" name="number{{ i }}" maxlength="4" pattern="\d{4}" style="width: 80px;" inputmode="numeric">
+                    <input type="text" name="number{{ i }}" maxlength="4" inputmode="numeric"
+                           pattern="[0-9]{4}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                           style="width: 80px;">
                 </td>
-                <td><input type="text" name="big{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;" inputmode="numeric"></td>
-                <td><input type="text" name="small{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;" inputmode="numeric"></td>
-                <td><input type="text" name="k1{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;" inputmode="numeric"></td>
-                <td><input type="text" name="k{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;" inputmode="numeric"></td>
+                <td><input type="text" name="big{{ i }}" maxlength="2" inputmode="numeric"
+                           pattern="[0-9]{1,2}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                           style="width: 40px;"></td>
+                <td><input type="text" name="small{{ i }}" maxlength="2" inputmode="numeric"
+                           pattern="[0-9]{1,2}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                           style="width: 40px;"></td>
+                <td><input type="text" name="k1{{ i }}" maxlength="2" inputmode="numeric"
+                           pattern="[0-9]{1,2}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                           style="width: 40px;"></td>
+                <td><input type="text" name="k{{ i }}" maxlength="2" inputmode="numeric"
+                           pattern="[0-9]{1,2}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                           style="width: 40px;"></td>
 
                 {% for d in range(7) %}
-                    <td><input type="checkbox" name="date{{ i }}_{{ d }}"></td>
+                    <td><input type="checkbox" name="date{{ i }}_{{ d }}" style="width:18px;height:18px;"></td>
                 {% endfor %}
 
                 {% for m in ['M','P','T','S','B','K','W','H','E'] %}
-                    <td><input type="checkbox" name="market{{ i }}_{{ m }}"></td>
+                    {% set bg = {
+                        'M': '#ffff00', 'P': '#0000ff', 'T': '#cc0000',
+                        'S': '#4c8ed1', 'B': '#e51d20', 'K': '#008835',
+                        'W': '#00540e', 'H': '#fed606', 'E': '#ffa500'
+                    }[m] %}
+                    <td style="background-color:{{ bg }};">
+                        <input type="checkbox" name="market{{ i }}_{{ m }}" style="width:18px;height:18px;">
+                    </td>
                 {% endfor %}
 
                 <td>
