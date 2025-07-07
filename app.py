@@ -14,7 +14,7 @@ def index():
 @app.route('/bet')
 def bet():
     date_today = datetime.today()
-    return render_template('bet.html', date_today=date_today)
+    return render_template('bet.html', date_today=date_today, timedelta=timedelta)
 
 @app.route('/report')
 def report():
