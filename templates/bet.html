@@ -5,15 +5,24 @@
     <table border="1" cellpadding="5">
         <thead>
             <tr>
-                <th>#</th>
-                <th>下注号码</th>
-                <th>大</th>
-                <th>小</th>
-                <th>千字A</th>
-                <th>千字</th>
-                <th>市场</th>
-                <th>种类</th>
-                <th>总额</th>
+                <th rowspan="2">#</th>
+                <th rowspan="2">下注号码</th>
+                <th rowspan="2">大</th>
+                <th rowspan="2">小</th>
+                <th rowspan="2">千字A</th>
+                <th rowspan="2">千字</th>
+                <th colspan="7">下注日期</th>
+                <th colspan="9">市场</th>
+                <th rowspan="2">种类</th>
+                <th rowspan="2">总额</th>
+            </tr>
+            <tr>
+                {% for d in range(7) %}
+                    <th>{{ (date_today + timedelta(days=d)).strftime("%-d/%-m") }}</th>
+                {% endfor %}
+                {% for m in ['M','P','T','S','B','K','W','H','E'] %}
+                    <th>{{ m }}</th>
+                {% endfor %}
             </tr>
         </thead>
         <tbody>
@@ -21,25 +30,21 @@
             <tr>
                 <td>{{ i }}</td>
                 <td>
-                    <input type="text" name="number{{ i }}" maxlength="4" pattern="\d{4}" style="width: 80px;">
+                    <input type="text" name="number{{ i }}" maxlength="4" pattern="\d{4}" style="width: 80px;" inputmode="numeric">
                 </td>
-                <td><input type="text" name="big{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;"></td>
-                <td><input type="text" name="small{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;"></td>
-                <td><input type="text" name="k1{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;"></td>
-                <td><input type="text" name="k{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;"></td>
-                <td>
-                    <select name="market{{ i }}">
-                        <option value="M">M</option>
-                        <option value="P">P</option>
-                        <option value="T">T</option>
-                        <option value="S">S</option>
-                        <option value="H">H</option>
-                        <option value="E">E</option>
-                        <option value="B">B</option>
-                        <option value="K">K</option>
-                        <option value="W">W</option>
-                    </select>
-                </td>
+                <td><input type="text" name="big{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;" inputmode="numeric"></td>
+                <td><input type="text" name="small{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;" inputmode="numeric"></td>
+                <td><input type="text" name="k1{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;" inputmode="numeric"></td>
+                <td><input type="text" name="k{{ i }}" maxlength="2" pattern="\d{1,2}" style="width: 40px;" inputmode="numeric"></td>
+
+                {% for d in range(7) %}
+                    <td><input type="checkbox" name="date{{ i }}_{{ d }}"></td>
+                {% endfor %}
+
+                {% for m in ['M','P','T','S','B','K','W','H','E'] %}
+                    <td><input type="checkbox" name="market{{ i }}_{{ m }}"></td>
+                {% endfor %}
+
                 <td>
                     <select name="type{{ i }}">
                         <option>正字</option>
