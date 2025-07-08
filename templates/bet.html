@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>下注页面</h2>
-<form method="post" onsubmit="return confirmBet();">
+<form method="post" onsubmit="return handleBet();">
     <table border="1" cellpadding="5">
         <thead>
             <tr>
@@ -96,11 +96,12 @@
 
 <!-- JS 脚本 -->
 <script>
-function confirmBet() {
+function handleBet() {
     const dateLabels = [...document.querySelectorAll('input[id^="select_date_"]')]
         .filter(d => d.checked)
         .map(d => d.nextSibling.textContent.trim());
-    const selectedDate = dateLabels.length > 0 ? dateLabels.join(', ') : '未选日期';
+
+    const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
 
     const selectedMarkets = [...document.querySelectorAll('input[id^="select_market_"]')]
         .filter(m => m.checked)
@@ -108,35 +109,46 @@ function confirmBet() {
         .join('');
 
     let total = 0;
-    let messageLines = [];
+    let betLines = [];
+
     for (let i = 1; i <= 12; i++) {
         const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!num) continue;
 
         const type = document.querySelector(`select[name="type${i}"]`)?.value;
-
         const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
         const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
         const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
         const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
 
-        let content = `${num} =`;
-        if (B) content += ` ${B}B`;
-        if (S) content += ` ${S}S`;
-        if (A) content += ` ${A}A`;
-        if (C) content += ` ${C}C`;
+        let line = `${num} =`;
+        if (B) line += ` ${B}B`;
+        if (S) line += ` ${S}S`;
+        if (A) line += ` ${A}A`;
+        if (C) line += ` ${C}C`;
 
-        if (type === 'IBox') content += ' (IBox)';
-        if (type === 'Box') content += ' (Box)';
+        if (type === 'IBox') line += ' (IBox)';
+        if (type === 'Box') line += ' (Box)';
 
         const row = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
         total += row;
-        messageLines.push(content);
+        betLines.push(line);
     }
 
-    const msg = `${selectedDate}\n${selectedMarkets}\n${messageLines.join('\n')}\nGT = ${total.toFixed(2)}`;
+    // Step 1: 弹出确认框
+    const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
+    if (!confirm(confirmMsg)) return false;
 
-    return confirm(`下注总金额 = RM${total.toFixed(2)}\n确认下注？\n\n${msg}`);
+    // Step 2: 弹出成功信息
+    let successMsg = `✅ 下注成功！\n\n`;
+    for (const date of selectedDates) {
+        successMsg += `${date}\n`;
+        successMsg += `${selectedMarkets}\n`;
+        successMsg += `${betLines.join('\n')}\nGT = ${total.toFixed(2)}\n\n`;
+    }
+
+    alert(successMsg);
+    return true;  // 最终提交表单
 }
 
 function toggleColumn(type, key) {
