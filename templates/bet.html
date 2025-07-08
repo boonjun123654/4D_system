@@ -45,17 +45,13 @@
                            style="width: 80px;">
                 </td>
                 <td><input type="text" name="big{{ i }}" maxlength="2" inputmode="numeric"
-                           pattern="[0-9]{1,2}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                           style="width: 40px;"></td>
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
                 <td><input type="text" name="small{{ i }}" maxlength="2" inputmode="numeric"
-                           pattern="[0-9]{1,2}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                           style="width: 40px;"></td>
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
                 <td><input type="text" name="k1{{ i }}" maxlength="2" inputmode="numeric"
-                           pattern="[0-9]{1,2}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                           style="width: 40px;"></td>
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
                 <td><input type="text" name="k{{ i }}" maxlength="2" inputmode="numeric"
-                           pattern="[0-9]{1,2}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                           style="width: 40px;"></td>
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
 
                 {% for d in range(7) %}
                     <td><input type="checkbox" name="date{{ i }}_{{ d }}" class="date_col_{{ d }}" style="width:18px;height:18px;"></td>
@@ -79,14 +75,26 @@
                         <option>Box</option>
                     </select>
                 </td>
-                <td>0.00</td>
+                <td><span class="row-total">0.00</span></td>
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="20" style="text-align:right; font-weight:bold;">
+                    总下注金额：RM <span id="grand-total">0.00</span>
+                </td>
+            </tr>
+        </tfoot>
     </table>
+
+    <div style="margin-top: 10px;">
+        <button type="submit">提交</button>
+        <button type="reset">清除</button>
+    </div>
 </form>
 
-<!-- ✅ JavaScript 脚本（放在页面底部） -->
+<!-- JS 脚本 -->
 <script>
 function toggleColumn(type, key) {
     let checkboxes;
@@ -101,69 +109,53 @@ function toggleColumn(type, key) {
         checkboxes.forEach(cb => cb.checked = state);
     }
 }
-</script>
 
-<script>
+function updateTotals() {
+    let grandTotal = 0;
+    for (let i = 1; i <= 12; i++) {
+        const big = parseFloat(document.querySelector(`input[name="big${i}"]`)?.value) || 0;
+        const small = parseFloat(document.querySelector(`input[name="small${i}"]`)?.value) || 0;
+        const k1 = parseFloat(document.querySelector(`input[name="k1${i}"]`)?.value) || 0;
+        const k = parseFloat(document.querySelector(`input[name="k${i}"]`)?.value) || 0;
+        const rowTotal = big + small + k1 + k;
+
+        document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
+        grandTotal += rowTotal;
+    }
+    document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
 
-    // 监听所有输入框
+    // 键盘跳格
     inputs.forEach((input, idx) => {
         input.addEventListener("keydown", function(e) {
             if (e.key === " ") {
-                e.preventDefault(); // 阻止空格滚动页面
-                if (idx + 1 < inputs.length) {
-                    inputs[idx + 1].focus();
-                }
+                e.preventDefault();
+                if (idx + 1 < inputs.length) inputs[idx + 1].focus();
             }
-
-            // 如果是下注号码栏，按 Enter 跳到下一行同一栏
             if (e.key === "Enter" && this.name.startsWith("number")) {
                 e.preventDefault();
                 const match = this.name.match(/^number(\d+)$/);
                 if (match) {
                     const nextIndex = parseInt(match[1]) + 1;
                     const nextInput = document.querySelector(`input[name="number${nextIndex}"]`);
-                    if (nextInput) {
-                        nextInput.focus();
-                    }
+                    if (nextInput) nextInput.focus();
                 }
             }
         });
     });
+
+    document.querySelectorAll('input[type="text"]').forEach(input => {
+        input.addEventListener('input', updateTotals);
+    });
+
+    document.querySelector('button[type="reset"]').addEventListener('click', function() {
+        setTimeout(updateTotals, 50);
+    });
+
+    updateTotals();
 });
 </script>
-
-{% if results %}
-<h3>下注结果</h3>
-<table border="1" cellpadding="5">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>号码</th>
-            <th>类型</th>
-            <th>市场</th>
-            <th>种类</th>
-            <th>下注金额</th>
-            <th>组合下注总额</th>
-            <th>单注赔率</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for r in results %}
-        <tr>
-            <td>{{ r.row }}</td>
-            <td>{{ r.number }}</td>
-            <td>{{ r.type }}</td>
-            <td>{{ r.market }}</td>
-            <td>{{ r.bet_type }}</td>
-            <td>{{ r.amount }}</td>
-            <td>{{ r.total }}</td>
-            <td>{{ r.payout }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% endif %}
-
 {% endblock %}
