@@ -97,7 +97,6 @@
 <!-- JS 脚本 -->
 <script>
 function handleBet() {
-    // ✅ 修正：根据实际下注行中勾选的日期和市场来决定
     const selectedDateIndexes = new Set();
     const selectedMarketKeys = new Set();
 
@@ -105,29 +104,24 @@ function handleBet() {
         const number = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!number) continue;
 
-        // 查找该行勾选了哪些日期
         for (let d = 0; d < 7; d++) {
             const checkbox = document.querySelector(`input[name="date${i}_${d}"]`);
             if (checkbox?.checked) selectedDateIndexes.add(d);
         }
 
-        // 查找该行勾选了哪些市场
         for (const m of ['M','P','T','S','B','K','W','H','E']) {
             const checkbox = document.querySelector(`input[name="market${i}_${m}"]`);
             if (checkbox?.checked) selectedMarketKeys.add(m);
         }
     }
 
-    // 转换日期索引为文字
     const dateLabels = Array.from(selectedDateIndexes).map(d => {
         const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
         const [day, month] = rawLabel.split('/').map(n => n.padStart(2, '0'));
-        const formattedLabel = `${day}/${month}`;
-        return formattedLabel || '未选日期';
+        return `${day}/${month}` || '未选日期';
     });
-    const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
 
-    // 市场字母串
+    const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
     const selectedMarkets = Array.from(selectedMarketKeys).join('') || '未选市场';
 
     let total = 0;
@@ -157,9 +151,6 @@ function handleBet() {
         betLines.push(line);
     }
 
-    const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
-    if (!confirm(confirmMsg)) return false;
-
     const finalText = selectedDates.map(date => {
         return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
     }).join('\n\n');
@@ -170,23 +161,20 @@ function handleBet() {
              background:white;padding:20px;border:2px solid black;z-index:9999;width:300px;">
             <pre id="resultText" style="white-space:pre-wrap;font-family:inherit;">${finalText}</pre>
             <button onclick="copyResult()" style="margin-right:10px;">复制</button>
-            <button onclick="confirmResult()">确认</button>
+            <button onclick="closeModal()">确认</button>
         </div>
     `;
     document.body.appendChild(modal);
-    return false;  // 阻止原表单提交，等点击“确认”再处理
+    return false;  // 阻止默认表单提交
 }
 
 function copyResult() {
     const text = document.getElementById("resultText").innerText;
-    navigator.clipboard.writeText(text).then(() => {
-        alert("✅ 已复制到剪贴板");
-    });
+    navigator.clipboard.writeText(text); // ✅ 无提示
 }
 
-function confirmResult() {
-    document.getElementById("resultModal").remove();
-    document.querySelector('form').submit();  // 手动提交表单
+function closeModal() {
+    document.getElementById("resultModal")?.remove();
 }
 
 function toggleColumn(type, key) {
