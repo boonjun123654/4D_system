@@ -89,8 +89,8 @@
     </table>
 
     <div style="margin-top: 10px;">
-        <button type="submit">提交</button>
-        <button type="reset">清除</button>
+        <button type="submit" style="font-size: 18px; padding: 8px 20px;">提交</button>
+        <button type="reset" style="font-size: 18px; padding: 8px 20px;">清除</button>
     </div>
 </form>
 
@@ -148,9 +148,8 @@ function updateTotals() {
 
         const factor = (type === 'Box') ? 24 : 1;
         const comboCount = getCombinationCount(number);
-        const typeFactor = (type === 'IBox') ? (comboCount || 1) : 1;
 
-        const rowTotal = ((B + S + A + C) * factor / typeFactor) * dateCount * marketCount;
+        const rowTotal = ((B + S + A + C) * factor) * dateCount * marketCount;
 
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
