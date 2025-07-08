@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>下注页面</h2>
-<form method="post">
+<form method="post" onsubmit="return confirmBet();">
     <table border="1" cellpadding="5">
         <thead>
             <tr>
@@ -96,6 +96,49 @@
 
 <!-- JS 脚本 -->
 <script>
+function confirmBet() {
+    const dateLabels = [...document.querySelectorAll('input[id^="select_date_"]')]
+        .filter(d => d.checked)
+        .map(d => d.nextSibling.textContent.trim());
+    const selectedDate = dateLabels.length > 0 ? dateLabels.join(', ') : '未选日期';
+
+    const selectedMarkets = [...document.querySelectorAll('input[id^="select_market_"]')]
+        .filter(m => m.checked)
+        .map(m => m.nextSibling.textContent.trim())
+        .join('');
+
+    let total = 0;
+    let messageLines = [];
+    for (let i = 1; i <= 12; i++) {
+        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!num) continue;
+
+        const type = document.querySelector(`select[name="type${i}"]`)?.value;
+
+        const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
+        const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
+        const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
+        const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
+
+        let content = `${num} =`;
+        if (B) content += ` ${B}B`;
+        if (S) content += ` ${S}S`;
+        if (A) content += ` ${A}A`;
+        if (C) content += ` ${C}C`;
+
+        if (type === 'IBox') content += ' (IBox)';
+        if (type === 'Box') content += ' (Box)';
+
+        const row = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
+        total += row;
+        messageLines.push(content);
+    }
+
+    const msg = `${selectedDate}\n${selectedMarkets}\n${messageLines.join('\n')}\nGT = ${total.toFixed(2)}`;
+
+    return confirm(`下注总金额 = RM${total.toFixed(2)}\n确认下注？\n\n${msg}`);
+}
+
 function toggleColumn(type, key) {
     let checkboxes;
     if (type === 'date') {
