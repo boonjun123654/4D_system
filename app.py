@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 from odds_config import odds
 from datetime import datetime, timedelta
+from utils import calculate_payout
 
 value = odds["M"]["S"]["1st"]
 print("M 市场 小 投注 头奖赔率 =", value)
