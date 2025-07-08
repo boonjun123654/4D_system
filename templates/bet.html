@@ -134,4 +134,36 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
+{% if results %}
+<h3>下注结果</h3>
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>号码</th>
+            <th>类型</th>
+            <th>市场</th>
+            <th>种类</th>
+            <th>下注金额</th>
+            <th>组合下注总额</th>
+            <th>单注赔率</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in results %}
+        <tr>
+            <td>{{ r.row }}</td>
+            <td>{{ r.number }}</td>
+            <td>{{ r.type }}</td>
+            <td>{{ r.market }}</td>
+            <td>{{ r.bet_type }}</td>
+            <td>{{ r.amount }}</td>
+            <td>{{ r.total }}</td>
+            <td>{{ r.payout }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
 {% endblock %}
