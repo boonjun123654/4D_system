@@ -7,10 +7,10 @@
             <tr>
                 <th rowspan="2">#</th>
                 <th rowspan="2">下注号码</th>
-                <th rowspan="2">大</th>
-                <th rowspan="2">小</th>
-                <th rowspan="2">千字A</th>
-                <th rowspan="2">千字</th>
+                <th rowspan="2">B</th>
+                <th rowspan="2">S</th>
+                <th rowspan="2">A</th>
+                <th rowspan="2">C</th>
                 <th colspan="7">下注日期</th>
                 <th colspan="9">市场</th>
                 <th rowspan="2">种类</th>
@@ -44,13 +44,13 @@
                            pattern="[0-9]{4}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
                            style="width: 80px;">
                 </td>
-                <td><input type="text" name="big{{ i }}" maxlength="2" inputmode="numeric"
+                <td><input type="text" name="B{{ i }}" maxlength="2" inputmode="numeric"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
-                <td><input type="text" name="small{{ i }}" maxlength="2" inputmode="numeric"
+                <td><input type="text" name="S{{ i }}" maxlength="2" inputmode="numeric"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
-                <td><input type="text" name="k1{{ i }}" maxlength="2" inputmode="numeric"
+                <td><input type="text" name="A{{ i }}" maxlength="2" inputmode="numeric"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
-                <td><input type="text" name="k{{ i }}" maxlength="2" inputmode="numeric"
+                <td><input type="text" name="C{{ i }}" maxlength="2" inputmode="numeric"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
 
                 {% for d in range(7) %}
@@ -110,52 +110,56 @@ function toggleColumn(type, key) {
     }
 }
 
+function getCombinationCount(number) {
+    const digits = number.padStart(4, '0').split('');
+    const counts = {};
+    digits.forEach(d => counts[d] = (counts[d] || 0) + 1);
+    const values = Object.values(counts).sort((a, b) => b - a).join(',');
+    switch (values) {
+        case '4': return 1;
+        case '3,1': return 4;
+        case '2,2': return 6;
+        case '2,1,1': return 12;
+        case '1,1,1,1': return 24;
+        default: return 0;
+    }
+}
+
 function updateTotals() {
     let grandTotal = 0;
     for (let i = 1; i <= 12; i++) {
-        const big = parseFloat(document.querySelector(`input[name="big${i}"]`)?.value) || 0;
-        const small = parseFloat(document.querySelector(`input[name="small${i}"]`)?.value) || 0;
-        const k1 = parseFloat(document.querySelector(`input[name="k1${i}"]`)?.value) || 0;
-        const k = parseFloat(document.querySelector(`input[name="k${i}"]`)?.value) || 0;
-        const rowTotal = big + small + k1 + k;
+        const number = document.querySelector(`input[name="number${i}"]`)?.value || '';
+        const type = document.querySelector(`select[name="type${i}"]`)?.value || '正字';
+
+        const B = parseFloat(document.querySelector(`input[name="big${i}"]`)?.value) || 0;
+        const S = parseFloat(document.querySelector(`input[name="small${i}"]`)?.value) || 0;
+        const A = parseFloat(document.querySelector(`input[name="k1${i}"]`)?.value) || 0;
+        const C = parseFloat(document.querySelector(`input[name="k${i}"]`)?.value) || 0;
+
+        // count date checkboxes
+        let dateCount = 0;
+        for (let d = 0; d < 7; d++) {
+            if (document.querySelector(`input[name="date${i}_${d}"]`)?.checked) dateCount++;
+        }
+
+        // count market checkboxes
+        let marketCount = 0;
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) marketCount++;
+        }
+
+        const factor = (type === 'Box') ? 24 : 1;  // 正字/IBox 都是 1 倍，Box 是 24 倍
+
+        const comboCount = getCombinationCount(number);
+        const typeFactor = (type === 'IBox') ? (comboCount || 1) : 1;
+
+        const rowTotal = ((big * factor / typeFactor) + (small * factor / typeFactor) + (k1 * factor / typeFactor) + (k * factor / typeFactor)) * dateCount * marketCount;
 
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
     }
+
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
-
-document.addEventListener("DOMContentLoaded", function() {
-    const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
-
-    // 键盘跳格
-    inputs.forEach((input, idx) => {
-        input.addEventListener("keydown", function(e) {
-            if (e.key === " ") {
-                e.preventDefault();
-                if (idx + 1 < inputs.length) inputs[idx + 1].focus();
-            }
-            if (e.key === "Enter" && this.name.startsWith("number")) {
-                e.preventDefault();
-                const match = this.name.match(/^number(\d+)$/);
-                if (match) {
-                    const nextIndex = parseInt(match[1]) + 1;
-                    const nextInput = document.querySelector(`input[name="number${nextIndex}"]`);
-                    if (nextInput) nextInput.focus();
-                }
-            }
-        });
-    });
-
-    document.querySelectorAll('input[type="text"]').forEach(input => {
-        input.addEventListener('input', updateTotals);
-    });
-
-    document.querySelector('button[type="reset"]').addEventListener('click', function() {
-        setTimeout(updateTotals, 50);
-    });
-
-    updateTotals();
-});
 </script>
 {% endblock %}
