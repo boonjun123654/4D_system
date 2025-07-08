@@ -96,7 +96,6 @@
 
 <!-- JS 脚本 -->
 <script>
-<script>
 function handleBet() {
     const dateLabels = [...document.querySelectorAll('input[id^="select_date_"]')].filter(d => d.checked)
         .map(d => d.nextSibling.textContent.trim());
@@ -163,8 +162,6 @@ function confirmResult() {
     document.getElementById("resultModal").remove();
     document.querySelector('form').submit();  // 手动提交表单
 }
-</script>
-
 
 function toggleColumn(type, key) {
     let checkboxes;
