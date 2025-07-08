@@ -136,24 +136,21 @@ function updateTotals() {
         const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
         const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
 
-        // count date checkboxes
         let dateCount = 0;
         for (let d = 0; d < 7; d++) {
             if (document.querySelector(`input[name="date${i}_${d}"]`)?.checked) dateCount++;
         }
 
-        // count market checkboxes
         let marketCount = 0;
         for (const m of ['M','P','T','S','B','K','W','H','E']) {
             if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) marketCount++;
         }
 
-        const factor = (type === 'Box') ? 24 : 1;  // 正字/IBox 都是 1 倍，Box 是 24 倍
-
+        const factor = (type === 'Box') ? 24 : 1;
         const comboCount = getCombinationCount(number);
         const typeFactor = (type === 'IBox') ? (comboCount || 1) : 1;
 
-        const rowTotal = ((big * factor / typeFactor) + (small * factor / typeFactor) + (k1 * factor / typeFactor) + (k * factor / typeFactor)) * dateCount * marketCount;
+        const rowTotal = ((B * factor / typeFactor) + (S * factor / typeFactor) + (A * factor / typeFactor) + (C * factor / typeFactor)) * dateCount * marketCount;
 
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
@@ -161,5 +158,6 @@ function updateTotals() {
 
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
+
 </script>
 {% endblock %}
