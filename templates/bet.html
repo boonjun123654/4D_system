@@ -97,12 +97,21 @@
 <!-- JS 脚本 -->
 <script>
 function handleBet() {
-    const dateLabels = [...document.querySelectorAll('input[id^="select_date_"]')].filter(d => d.checked)
-        .map(d => d.nextSibling.textContent.trim());
+    const dateLabels = [];
+    for (let d = 0; d < 7; d++) {
+        const checkbox = document.getElementById(`select_date_${d}`);
+        if (checkbox?.checked) {
+            const label = checkbox.parentElement.textContent.trim().split('\n').pop().trim();
+            dateLabels.push(label);
+        }
+    }
     const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
 
-    const selectedMarkets = [...document.querySelectorAll('input[id^="select_market_"]')].filter(m => m.checked)
-        .map(m => m.nextSibling.textContent.trim()).join('');
+    const selectedMarkets = [];
+    for (const m of ['M','P','T','S','B','K','W','H','E']) {
+        const cb = document.getElementById(`select_market_${m}`);
+        if (cb?.checked) selectedMarkets.push(m);
+    }
 
     let total = 0;
     let betLines = [];
