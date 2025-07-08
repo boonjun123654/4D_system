@@ -96,99 +96,75 @@
 
 <!-- JS 脚本 -->
 <script>
+<script>
 function handleBet() {
-    const dateMap = {};
-    let grandTotal = 0;
+    const dateLabels = [...document.querySelectorAll('input[id^="select_date_"]')].filter(d => d.checked)
+        .map(d => d.nextSibling.textContent.trim());
+    const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
+
+    const selectedMarkets = [...document.querySelectorAll('input[id^="select_market_"]')].filter(m => m.checked)
+        .map(m => m.nextSibling.textContent.trim()).join('');
+
+    let total = 0;
+    let betLines = [];
 
     for (let i = 1; i <= 12; i++) {
-        const number = document.querySelector(`input[name="number${i}"]`)?.value.trim();
-        if (!number) continue;
+        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!num) continue;
 
+        const type = document.querySelector(`select[name="type${i}"]`)?.value;
         const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
         const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
         const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
         const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
-        const type = document.querySelector(`select[name="type${i}"]`)?.value;
 
-        const rowTotal = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
-        grandTotal += rowTotal;
-
-        let line = `${number} =`;
+        let line = `${num} =`;
         if (B) line += ` ${B}B`;
         if (S) line += ` ${S}S`;
         if (A) line += ` ${A}A`;
         if (C) line += ` ${C}C`;
-        if (type === "Box") line += " (Box)";
-        if (type === "IBox") line += " (IBox)";
 
-        // 获取所选日期
-        for (let d = 0; d < 7; d++) {
-            const dateCheckbox = document.querySelector(`input[name="date${i}_${d}"]`);
-            if (!dateCheckbox?.checked) continue;
-            const dateLabel = document.querySelector(`#select_date_${d}`)?.nextSibling?.textContent?.trim() || '未选日期';
+        if (type === 'IBox') line += ' (IBox)';
+        if (type === 'Box') line += ' (Box)';
 
-            // 获取所选市场
-            let selectedMarkets = "";
-            for (const m of ['M','P','T','S','B','K','W','H','E']) {
-                if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) {
-                    selectedMarkets += m;
-                }
-            }
-
-            const key = `${dateLabel}|${selectedMarkets}`;
-            if (!dateMap[key]) dateMap[key] = [];
-            dateMap[key].push(line);
-        }
+        const row = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
+        total += row;
+        betLines.push(line);
     }
 
-    // 确认弹窗
-    const confirmMsg = `下注总金额 = RM ${grandTotal.toFixed(2)}\n确认下注？`;
+    const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
     if (!confirm(confirmMsg)) return false;
 
-    // 构建成功信息
-    let successText = "✅ 下注成功！\n\n";
-    for (const [key, lines] of Object.entries(dateMap)) {
-        const [date, markets] = key.split("|");
-        successText += `${date}\n${markets || '未选市场'}\n${lines.join('\n')}\n\n`;
-    }
-    successText += `GT = ${grandTotal.toFixed(2)}`;
+    const finalText = selectedDates.map(date => {
+        return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
+    }).join('\n\n');
 
-    // 显示弹窗和复制按钮
-    const popup = document.createElement("div");
-    popup.style.position = "fixed";
-    popup.style.left = "20px";
-    popup.style.top = "20px";
-    popup.style.background = "#fff";
-    popup.style.border = "2px solid green";
-    popup.style.padding = "15px";
-    popup.style.zIndex = "9999";
-    popup.style.fontSize = "16px";
-    popup.style.whiteSpace = "pre-line";
-
-    const msgBox = document.createElement("div");
-    msgBox.innerText = successText;
-    popup.appendChild(msgBox);
-
-    const copyBtn = document.createElement("button");
-    copyBtn.innerText = "📋 复制文案";
-    copyBtn.style.marginTop = "10px";
-    copyBtn.onclick = () => {
-        navigator.clipboard.writeText(successText).then(() => {
-            copyBtn.innerText = "✅ 已复制";
-        });
-    };
-    popup.appendChild(copyBtn);
-
-    const closeBtn = document.createElement("button");
-    closeBtn.innerText = "❌ 关闭";
-    closeBtn.style.marginLeft = "10px";
-    closeBtn.onclick = () => popup.remove();
-    popup.appendChild(closeBtn);
-
-    document.body.appendChild(popup);
-
-    return true;
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div id="resultModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+             background:white;padding:20px;border:2px solid black;z-index:9999;width:300px;">
+            <pre id="resultText" style="white-space:pre-wrap;font-family:inherit;">${finalText}</pre>
+            <button onclick="copyResult()" style="margin-right:10px;">复制</button>
+            <button onclick="confirmResult()">确认</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    return false;  // 阻止原表单提交，等点击“确认”再处理
 }
+
+function copyResult() {
+    const text = document.getElementById("resultText").innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        alert("✅ 已复制到剪贴板");
+    });
+}
+
+function confirmResult() {
+    document.getElementById("resultModal").remove();
+    document.querySelector('form').submit();  // 手动提交表单
+}
+</script>
+
 
 function toggleColumn(type, key) {
     let checkboxes;
