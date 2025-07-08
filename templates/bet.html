@@ -120,14 +120,15 @@ function handleBet() {
 
     // 转换日期索引为文字
     const dateLabels = Array.from(selectedDateIndexes).map(d => {
-        const label = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
-        return label || '未选日期';
+        const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
+        const [day, month] = rawLabel.split('/').map(n => n.padStart(2, '0'));
+        const formattedLabel = `${day}/${month}`;
+        return formattedLabel || '未选日期';
     });
     const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
 
     // 市场字母串
     const selectedMarkets = Array.from(selectedMarketKeys).join('') || '未选市场';
-
 
     let total = 0;
     let betLines = [];
