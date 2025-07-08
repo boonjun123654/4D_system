@@ -150,7 +150,7 @@ function updateTotals() {
         const comboCount = getCombinationCount(number);
         const typeFactor = (type === 'IBox') ? (comboCount || 1) : 1;
 
-        const rowTotal = ((B * factor / typeFactor) + (S * factor / typeFactor) + (A * factor / typeFactor) + (C * factor / typeFactor)) * dateCount * marketCount;
+        const rowTotal = ((B + S + A + C) * factor / typeFactor) * dateCount * marketCount;
 
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
@@ -159,5 +159,43 @@ function updateTotals() {
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
 
+document.addEventListener("DOMContentLoaded", function () {
+    const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
+
+    // 空格键跳格，Enter跳到下一行
+    inputs.forEach((input, idx) => {
+        input.addEventListener("keydown", function (e) {
+            if (e.key === " ") {
+                e.preventDefault();
+                if (idx + 1 < inputs.length) inputs[idx + 1].focus();
+            }
+            if (e.key === "Enter" && this.name.startsWith("number")) {
+                e.preventDefault();
+                const match = this.name.match(/^number(\d+)$/);
+                if (match) {
+                    const nextIndex = parseInt(match[1]) + 1;
+                    const nextInput = document.querySelector(`input[name="number${nextIndex}"]`);
+                    if (nextInput) nextInput.focus();
+                }
+            }
+        });
+    });
+
+    // 金额或号码变动时自动计算
+    document.querySelectorAll('input[type="text"], select').forEach(input => {
+        input.addEventListener('input', updateTotals);
+    });
+
+    // 勾选日期/市场也要触发计算
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', updateTotals);
+    });
+
+    document.querySelector('button[type="reset"]').addEventListener('click', function () {
+        setTimeout(updateTotals, 100);
+    });
+
+    updateTotals();
+});
 </script>
 {% endblock %}
