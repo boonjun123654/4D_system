@@ -97,21 +97,37 @@
 <!-- JS 脚本 -->
 <script>
 function handleBet() {
-    const dateLabels = [];
-    for (let d = 0; d < 7; d++) {
-        const checkbox = document.getElementById(`select_date_${d}`);
-        if (checkbox?.checked) {
-            const label = checkbox.parentElement.textContent.trim().split('\n').pop().trim();
-            dateLabels.push(label);
+    // ✅ 修正：根据实际下注行中勾选的日期和市场来决定
+    const selectedDateIndexes = new Set();
+    const selectedMarketKeys = new Set();
+
+    for (let i = 1; i <= 12; i++) {
+        const number = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!number) continue;
+
+        // 查找该行勾选了哪些日期
+        for (let d = 0; d < 7; d++) {
+            const checkbox = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (checkbox?.checked) selectedDateIndexes.add(d);
+        }
+
+        // 查找该行勾选了哪些市场
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            const checkbox = document.querySelector(`input[name="market${i}_${m}"]`);
+            if (checkbox?.checked) selectedMarketKeys.add(m);
         }
     }
+
+    // 转换日期索引为文字
+    const dateLabels = Array.from(selectedDateIndexes).map(d => {
+        const label = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
+        return label || '未选日期';
+    });
     const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
 
-    const selectedMarkets = [];
-    for (const m of ['M','P','T','S','B','K','W','H','E']) {
-        const cb = document.getElementById(`select_market_${m}`);
-        if (cb?.checked) selectedMarkets.push(m);
-    }
+    // 市场字母串
+    const selectedMarkets = Array.from(selectedMarketKeys).join('') || '未选市场';
+
 
     let total = 0;
     let betLines = [];
