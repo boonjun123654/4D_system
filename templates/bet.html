@@ -110,17 +110,18 @@ const odds = {
     "E": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}}
 };
 
-function getHighestWin(markets, B, S, A, C) {
+function getHighestWin(markets, B, S, A, C, dateCount) {
     let max = 0;
     for (const m of ['H','E','M','P','T','S','B','K','W']) {
         if (!markets.includes(m)) continue;
         const o = odds[m];
-        const payout =
+        const payoutPerDraw =
             B * (o.B?.['1st'] || 0) +
             S * (o.S?.['1st'] || 0) +
             A * (o.A?.['1st'] || 0) +
             C * (o.C?.['1st'] || 0);
-        if (payout > max) max = payout;
+        const totalPayout = payoutPerDraw * dateCount;
+        if (totalPayout > max) max = totalPayout;
     }
     return max;
 }
@@ -156,7 +157,7 @@ function updateTotals() {
         grandTotal += rowTotal;
 
         // 计算最高赌金
-        const win = getHighestWin(markets, B, S, A, C);
+        const win = getHighestWin(markets, B, S, A, C, dateCount);
         document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
     }
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
