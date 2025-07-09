@@ -15,6 +15,7 @@
                 <th colspan="9">市场</th>
                 <th rowspan="2">种类</th>
                 <th rowspan="2">总额</th>
+                <th rowspan="2">💰中奖金额</th>
             </tr>
             <tr>
                 {% for d in range(7) %}
@@ -76,6 +77,7 @@
                     </select>
                 </td>
                 <td><span class="row-total">0.00</span></td>
+                <td><span class="win-amount">0.00</span></td>
             </tr>
             {% endfor %}
         </tbody>
@@ -96,6 +98,69 @@
 
 <!-- JS 脚本 -->
 <script>
+const odds = {
+    "M": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "P": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "T": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "S": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "B": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "K": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "W": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "H": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}},
+    "E": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}}
+};
+
+function getHighestWin(markets, B, S, A, C) {
+    let max = 0;
+    for (const m of ['H','E','M','P','T','S','B','K','W']) {
+        if (!markets.includes(m)) continue;
+        const o = odds[m];
+        const payout =
+            B * (o.B?.['1st'] || 0) +
+            S * (o.S?.['1st'] || 0) +
+            A * (o.A?.['1st'] || 0) +
+            C * (o.C?.['1st'] || 0);
+        if (payout > max) max = payout;
+    }
+    return max;
+}
+
+function updateTotals() {
+    let grandTotal = 0;
+    for (let i = 1; i <= 12; i++) {
+        const number = document.querySelector(`input[name="number${i}"]`)?.value || '';
+        const type = document.querySelector(`select[name="type${i}"]`)?.value || '正字';
+
+        const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
+        const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
+        const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
+        const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
+
+        let dateCount = 0;
+        for (let d = 0; d < 7; d++) {
+            if (document.querySelector(`input[name="date${i}_${d}"]`)?.checked) dateCount++;
+        }
+
+        let marketCount = 0;
+        const markets = [];
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) {
+                marketCount++;
+                markets.push(m);
+            }
+        }
+
+        const factor = (type === 'Box') ? 24 : 1;
+        const rowTotal = ((B + S + A + C) * factor) * dateCount * marketCount;
+        document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
+        grandTotal += rowTotal;
+
+        // 计算最高赌金
+        const win = getHighestWin(markets, B, S, A, C);
+        document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
+    }
+    document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
+}
 function handleBet() {
     // ✅ 修正：根据实际下注行中勾选的日期和市场来决定
     const selectedDateIndexes = new Set();
