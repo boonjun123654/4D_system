@@ -157,6 +157,12 @@ function updateTotals() {
         grandTotal += rowTotal;
 
         // 计算最高赌金
+        const markets = [];
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) {
+                markets.push(m);
+            }
+        }
         const win = getHighestWin(markets, B, S, A, C, dateCount);
         document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
     }
