@@ -235,28 +235,28 @@ function handleBet() {
     modal.innerHTML = `
         <div id="resultModal" style="
             position:fixed;
-            top:50%;left:50%;
-            transform:translate(-50%,-50%);
+            top:20px;left:50%;
+            transform:translate(-50%);
             background:#ffffff;
             border-radius:12px;
-            box-shadow:0 4px 10px rgba(0,0,0,0.2);
-            padding:20px;
+            box-shadow:0 4px 10px rgba(0,0,0,0.15);
+            padding:16px;
             width:90%;
             max-width:340px;
             z-index:9999;
-            font-size:16px;
+            font-size:15px;
             font-family:system-ui, sans-serif;
         ">
             <div id="resultText" style="
                 white-space:pre-wrap;
                 word-break:break-word;
-                margin-bottom:20px;
+                margin-bottom:16px;
             ">${finalText}</div>
             <div style="display:flex;justify-content:space-between;">
                 <button onclick="copyResult()" style="
                     flex:1;
                     margin-right:10px;
-                    padding:10px;
+                    padding:8px;
                     background:#007bff;
                     color:white;
                     border:none;
@@ -264,7 +264,7 @@ function handleBet() {
                 ">复制</button>
                 <button onclick="confirmResult()" style="
                     flex:1;
-                    padding:10px;
+                    padding:8px;
                     background:#28a745;
                     color:white;
                     border:none;
