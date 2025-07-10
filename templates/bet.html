@@ -150,7 +150,8 @@ function updateTotals() {
             }
         }
 
-        const factor = (type === 'Box') ? 24 : 1;
+        const comboCount = getCombinationCount(number);
+        const factor = (type === 'Box') ? comboCount : 1;
         const rowTotal = ((B + S + A + C) * factor) * dateCount * markets.length;
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
