@@ -138,36 +138,28 @@ function updateTotals() {
         const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
 
         let dateCount = 0;
+        const markets = [];
         for (let d = 0; d < 7; d++) {
             if (document.querySelector(`input[name="date${i}_${d}"]`)?.checked) dateCount++;
         }
-
-        let marketCount = 0;
-        const markets = [];
         for (const m of ['M','P','T','S','B','K','W','H','E']) {
             if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) {
-                marketCount++;
                 markets.push(m);
             }
         }
 
         const factor = (type === 'Box') ? 24 : 1;
-        const rowTotal = ((B + S + A + C) * factor) * dateCount * marketCount;
+        const rowTotal = ((B + S + A + C) * factor) * dateCount * markets.length;
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
 
-        // 计算最高赌金
-        const markets = [];
-        for (const m of ['M','P','T','S','B','K','W','H','E']) {
-            if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) {
-                markets.push(m);
-            }
-        }
+        // 💰中奖金额计算
         const win = getHighestWin(markets, B, S, A, C, dateCount);
         document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
     }
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
+
 function handleBet() {
     // ✅ 修正：根据实际下注行中勾选的日期和市场来决定
     const selectedDateIndexes = new Set();
@@ -289,40 +281,6 @@ function getCombinationCount(number) {
         default: return 0;
     }
 }
-
-function updateTotals() {
-    let grandTotal = 0;
-    for (let i = 1; i <= 12; i++) {
-        const number = document.querySelector(`input[name="number${i}"]`)?.value || '';
-        const type = document.querySelector(`select[name="type${i}"]`)?.value || '正字';
-
-        const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
-        const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
-        const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
-        const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
-
-        let dateCount = 0;
-        for (let d = 0; d < 7; d++) {
-            if (document.querySelector(`input[name="date${i}_${d}"]`)?.checked) dateCount++;
-        }
-
-        let marketCount = 0;
-        for (const m of ['M','P','T','S','B','K','W','H','E']) {
-            if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) marketCount++;
-        }
-
-        const factor = (type === 'Box') ? 24 : 1;
-        const comboCount = getCombinationCount(number);
-
-        const rowTotal = ((B + S + A + C) * factor) * dateCount * marketCount;
-
-        document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
-        grandTotal += rowTotal;
-    }
-
-    document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
-}
-
 document.addEventListener("DOMContentLoaded", function () {
     const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
 
