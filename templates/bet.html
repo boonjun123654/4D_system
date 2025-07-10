@@ -233,11 +233,44 @@ function handleBet() {
 
     const modal = document.createElement('div');
     modal.innerHTML = `
-        <div id="resultModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-             background:white;padding:20px;border:2px solid black;z-index:9999;width:300px;">
-            <pre id="resultText" style="white-space:pre-wrap;font-family:inherit;">${finalText}</pre>
-            <button onclick="copyResult()" style="margin-right:10px;">复制</button>
-            <button onclick="confirmResult()">确认</button>
+        <div id="resultModal" style="
+            position:fixed;
+            top:50%;left:50%;
+            transform:translate(-50%,-50%);
+            background:#ffffff;
+            border-radius:12px;
+            box-shadow:0 4px 10px rgba(0,0,0,0.2);
+            padding:20px;
+            width:90%;
+            max-width:340px;
+            z-index:9999;
+            font-size:16px;
+            font-family:system-ui, sans-serif;
+        ">
+            <div id="resultText" style="
+                white-space:pre-wrap;
+                word-break:break-word;
+                margin-bottom:20px;
+            ">${finalText}</div>
+            <div style="display:flex;justify-content:space-between;">
+                <button onclick="copyResult()" style="
+                    flex:1;
+                    margin-right:10px;
+                    padding:10px;
+                    background:#007bff;
+                    color:white;
+                    border:none;
+                    border-radius:6px;
+                ">复制</button>
+                <button onclick="confirmResult()" style="
+                    flex:1;
+                    padding:10px;
+                    background:#28a745;
+                    color:white;
+                    border:none;
+                    border-radius:6px;
+                ">确认</button>
+            </div>
         </div>
     `;
     document.body.appendChild(modal);
