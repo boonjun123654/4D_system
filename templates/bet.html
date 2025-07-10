@@ -274,6 +274,7 @@ function handleBet() {
         </div>
     `;
     document.body.appendChild(modal);
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
     return false;  // 阻止原表单提交，等点击“确认”再处理
 }
 
@@ -285,7 +286,6 @@ function copyResult() {
 }
 
 function confirmResult() {
-    document.body.style.zoom = "100%";
     document.getElementById("resultModal").remove();
     document.querySelector('form').submit();  // 手动提交表单
 }
