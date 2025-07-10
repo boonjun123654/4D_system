@@ -156,16 +156,12 @@ function updateTotals() {
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
 
-        // 计算最高中奖金额
-        const markets = [];
-        for (const m of ['M','P','T','S','B','K','W','H','E']) {
-            if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) {
-                markets.push(m);
-            }
-        }
+        // 计算最高赌金
         const win = getHighestWin(markets, B, S, A, C, dateCount);
         document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
-
+    }
+    document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
+}
 function handleBet() {
     // ✅ 修正：根据实际下注行中勾选的日期和市场来决定
     const selectedDateIndexes = new Set();
