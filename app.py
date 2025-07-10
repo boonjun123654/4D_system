@@ -74,7 +74,7 @@ def bet():
                 agent_id=None,
                 number=number,
                 type=bet_type,
-                B=B, S=S, A=A, C=C,
+                b=B, s=S, a=A, c=C,
                 total=total,
                 win_amount=0,
                 dates=dates,
