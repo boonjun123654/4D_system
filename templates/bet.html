@@ -285,11 +285,7 @@ function copyResult() {
 }
 
 function confirmResult() {
-    let meta = document.querySelector('meta[name=viewport]');
-    if (meta) {
-        meta.setAttribute('content', 'width=device-width, initial-scale=1.0');
-    }
-
+    document.body.style.zoom = "100%";
     document.getElementById("resultModal").remove();
     document.querySelector('form').submit();  // 手动提交表单
 }
