@@ -110,8 +110,10 @@ const odds = {
     "E": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}}
 };
 
-function getHighestWin(markets, B, S, A, C, dateCount) {
+function getHighestWin(markets, B, S, A, C, dateCount, type, number) {
     let max = 0;
+    const comboFactor = (type === 'IBox') ? getCombinationCount(number) : 1;
+
     for (const m of ['H','E','M','P','T','S','B','K','W']) {
         if (!markets.includes(m)) continue;
         const o = odds[m];
@@ -120,7 +122,7 @@ function getHighestWin(markets, B, S, A, C, dateCount) {
             S * (o.S?.['1st'] || 0) +
             A * (o.A?.['1st'] || 0) +
             C * (o.C?.['1st'] || 0);
-        const totalPayout = payoutPerDraw * dateCount;
+        const totalPayout = (payoutPerDraw * dateCount) / comboFactor;
         if (totalPayout > max) max = totalPayout;
     }
     return max;
@@ -154,7 +156,7 @@ function updateTotals() {
         grandTotal += rowTotal;
 
         // 💰中奖金额计算
-        const win = getHighestWin(markets, B, S, A, C, dateCount);
+        const win = getHighestWin(markets, B, S, A, C, dateCount, type, number);
         document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
     }
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
