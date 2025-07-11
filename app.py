@@ -3,6 +3,7 @@ from odds_config import odds
 from datetime import datetime, timedelta
 from utils import calculate_payout
 from models import db, FourDBet
+from collections import defaultdict
 import os
 
 value = odds["M"]["S"]["1st"]
@@ -94,7 +95,23 @@ def report():
 
 @app.route('/history')
 def history():
-    return render_template('history.html')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
+    end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
+
+    records = FourDBet.query.filter(
+        FourDBet.created_at >= start_date,
+        FourDBet.created_at <= end_date + timedelta(days=1)
+    ).order_by(FourDBet.created_at.desc()).all()
+
+    # 按日期归组
+    grouped = defaultdict(list)
+    for r in records:
+        date_key = r.created_at.strftime("%Y-%m-%d")
+        grouped[date_key].append(r)
+
+    return render_template("history.html", grouped=grouped, start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d"))
 
 if __name__ == '__main__':
     app.run(debug=True)
