@@ -18,36 +18,33 @@
     <div style="background: #e0e0e0; padding: 10px; margin-top: 20px;">
         <strong>{{ date }}</strong>
     </div>
-    <table border="1" cellpadding="6" cellspacing="0" width="100%">
-        <tr style="background:#f8f8f8;">
-            <th style="width: 10%;">代理</th>
-            <th style="width: 15%;">操作</th>
-            <th style="width: 25%;">下注详情</th>
-            <th style="width: 25%;"></th>
-            <th style="width: 25%;"></th>
-        </tr>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
         {% for bet in items %}
-        <tr>
-            <td>代理：未绑定</td>  {# 未来可改为 bet.agent.username #}
-            <td>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
-                    <a href="/bet?ref={{ bet.id }}">
-                        <button type="button" style="background-color:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px;max-width:120px;">
-                            重新下注
-                        </button>
-                    </a>
-                    <button type="button" onclick="confirmCancel('{{ bet.id }}')" style="background-color:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px;max-width:120px;">
-                        废除下注
+        <div style="width: 260px; aspect-ratio: 1/1; border: 1px solid #ccc; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; font-family: monospace;">
+            <!-- 代理 -->
+            <div><strong>代理：</strong>未绑定</div>
+
+            <!-- 操作按钮 -->
+            <div>
+                <a href="/bet?ref={{ bet.id }}">
+                    <button type="button" style="background-color:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px; width: 100%; margin-bottom: 8px;">
+                        重新下注
                     </button>
-                </div>
-            </td>
-            <td style="font-family: monospace;">
+                </a>
+                <button type="button" onclick="confirmCancel('{{ bet.id }}')" style="background-color:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px; width: 100%;">
+                    废除下注
+                </button>
+            </div>
+
+            <!-- 下注详情 -->
+            <div>
                 {% for d in bet.dates %}
                     <div><strong>{{ d }}</strong></div>
                     <div>{{ bet.markets | join('') }}</div>
                 {% endfor %}
                 <div>
-                    {{ bet.number }} = 
+                    {{ bet.number }} =
                     {% if bet.b %}{{ bet.b }}B {% endif %}
                     {% if bet.s %}{{ bet.s }}S {% endif %}
                     {% if bet.a %}{{ bet.a }}A {% endif %}
@@ -55,10 +52,10 @@
                     {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
                 </div>
                 <div>GT={{ "%.2f"|format(bet.total) }}</div>
-            </td>
-        </tr>
+            </div>
+        </div>
         {% endfor %}
-    </table>
+    </div>
 {% else %}
     <p>❗ 没有记录</p>
 {% endfor %}
