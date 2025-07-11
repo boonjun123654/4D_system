@@ -21,10 +21,10 @@
     <table border="1" cellpadding="6" cellspacing="0" width="100%">
         <tr style="background:#f8f8f8;">
             <th style="width: 10%;">代理</th>
-            <th style="width: 20%;">操作</th>
-            <th style="width: 40%;">下注详情</th>
-            <th style="width: 15%;"></th>
-            <th style="width: 15%;"></th>
+            <th style="width: 15%;">操作</th>
+            <th style="width: 25%;">下注详情</th>
+            <th style="width: 25%;"></th>
+            <th style="width: 25%;"></th>
         </tr>
         {% for bet in items %}
         <tr>
@@ -32,11 +32,11 @@
             <td>
                 <div style="display: flex; flex-direction: column; gap: 5px;">
                     <a href="/bet?ref={{ bet.id }}">
-                        <button type="button" style="background-color:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px;">
+                        <button type="button" style="background-color:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px;max-width:120px;">
                             重新下注
                         </button>
                     </a>
-                    <button type="button" onclick="confirmCancel('{{ bet.id }}')" style="background-color:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px;">
+                    <button type="button" onclick="confirmCancel('{{ bet.id }}')" style="background-color:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px;max-width:120px;">
                         废除下注
                     </button>
                 </div>
