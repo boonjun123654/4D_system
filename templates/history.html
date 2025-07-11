@@ -30,10 +30,16 @@
         <tr>
             <td>代理：未绑定</td>  {# 未来可改为 bet.agent.username #}
             <td>
-                <a href="/bet?ref={{ bet.id }}">
-                    <button type="button">重新下注</button>
-                </a>
-                <button type="button" onclick="confirmCancel('{{ bet.id }}')">废除下注</button>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <a href="/bet?ref={{ bet.id }}">
+                        <button type="button" style="background-color:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px;">
+                            重新下注
+                        </button>
+                    </a>
+                    <button type="button" onclick="confirmCancel('{{ bet.id }}')" style="background-color:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px;">
+                        废除下注
+                    </button>
+                </div>
             </td>
             <td style="font-family: monospace;">
                 {% for d in bet.dates %}
