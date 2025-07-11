@@ -122,7 +122,7 @@ function getHighestWin(markets, B, S, A, C, dateCount, type, number) {
             S * (o.S?.['1st'] || 0) +
             A * (o.A?.['1st'] || 0) +
             C * (o.C?.['1st'] || 0);
-        const totalPayout = (payoutPerDraw * dateCount) / comboFactor;
+        const totalPayout = payoutPerDraw / comboFactor;
         if (totalPayout > max) max = totalPayout;
     }
     return max;
