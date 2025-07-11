@@ -1,42 +1,50 @@
 {% extends "layout.html" %}
 {% block content %}
-<h2>下注记录</h2>
 
-<form method="get">
-    <label for="date">选择日期：</label>
-    <input type="date" name="date">
-    <button type="submit">查看</button>
+<h2>查单</h2>
+
+<form method="get" action="/history">
+    <div style="margin-bottom: 10px;">
+        <label>日期范围：</label>
+        <input type="date" name="start_date" value="{{ start_date }}">
+        <input type="date" name="end_date" value="{{ end_date }}">
+    </div>
+    <button type="submit">查找</button>
 </form>
 
-<br>
-<table border="1" cellpadding="5">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>号码</th>
-            <th>金额</th>
-            <th>市场</th>
-            <th>种类</th>
-            <th>操作</th>
+<hr>
+
+{% for date, items in grouped.items() %}
+    <div style="background: #e0e0e0; padding: 10px; margin-top: 20px;">
+        <strong>{{ date }}</strong>
+    </div>
+    <table border="1" cellpadding="6" cellspacing="0" width="100%">
+        <tr style="background:#f8f8f8;">
+            <th style="width: 10%;">下注时间</th>
+            <th style="width: 10%;">市场</th>
+            <th style="width: 80%;">下注详情</th>
         </tr>
-    </thead>
-    <tbody>
+        {% for bet in items %}
         <tr>
-            <td>1</td>
-            <td>1234</td>
-            <td>10.00</td>
-            <td>M</td>
-            <td>正字</td>
-            <td><button>删除</button></td>
+            <td>{{ bet.created_at.strftime('%H:%M:%S') }}</td>
+            <td>{{ bet.markets | join(',') }}</td>
+            <td style="font-family: monospace;">
+                {% for d in bet.dates %}
+                <div><strong>{{ d }}</strong></div>
+                {% endfor %}
+                {{ bet.number }} = 
+                {% if bet.b %}{{ bet.b }}B {% endif %}
+                {% if bet.s %}{{ bet.s }}S {% endif %}
+                {% if bet.a %}{{ bet.a }}A {% endif %}
+                {% if bet.c %}{{ bet.c }}C {% endif %}
+                {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
+                <div>GT={{ "%.2f"|format(bet.total) }}</div>
+            </td>
         </tr>
-        <tr>
-            <td>2</td>
-            <td>2233</td>
-            <td>5.00</td>
-            <td>T</td>
-            <td>IBox</td>
-            <td><button>删除</button></td>
-        </tr>
-    </tbody>
-</table>
+        {% endfor %}
+    </table>
+{% else %}
+    <p>❗ 没有记录</p>
+{% endfor %}
+
 {% endblock %}
