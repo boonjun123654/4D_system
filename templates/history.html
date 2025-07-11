@@ -20,24 +20,32 @@
     </div>
     <table border="1" cellpadding="6" cellspacing="0" width="100%">
         <tr style="background:#f8f8f8;">
-            <th style="width: 10%;">下注时间</th>
-            <th style="width: 10%;">市场</th>
-            <th style="width: 80%;">下注详情</th>
+            <th style="width: 10%;">代理</th>
+            <th style="width: 15%;">操作</th>
+            <th style="width: 75%;">下注详情</th>
         </tr>
         {% for bet in items %}
         <tr>
-            <td>{{ bet.created_at.strftime('%H:%M:%S') }}</td>
-            <td>{{ bet.markets | join(',') }}</td>
+            <td>代理：未绑定</td>  {# 未来可改为 bet.agent.username #}
+            <td>
+                <a href="/bet?ref={{ bet.id }}">
+                    <button type="button">重新下注</button>
+                </a>
+                <button type="button" onclick="confirmCancel('{{ bet.id }}')">废除下注</button>
+            </td>
             <td style="font-family: monospace;">
                 {% for d in bet.dates %}
-                <div><strong>{{ d }}</strong></div>
+                    <div><strong>{{ d }}</strong></div>
+                    <div>{{ bet.markets | join('') }}</div>
                 {% endfor %}
-                {{ bet.number }} = 
-                {% if bet.b %}{{ bet.b }}B {% endif %}
-                {% if bet.s %}{{ bet.s }}S {% endif %}
-                {% if bet.a %}{{ bet.a }}A {% endif %}
-                {% if bet.c %}{{ bet.c }}C {% endif %}
-                {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
+                <div>
+                    {{ bet.number }} = 
+                    {% if bet.b %}{{ bet.b }}B {% endif %}
+                    {% if bet.s %}{{ bet.s }}S {% endif %}
+                    {% if bet.a %}{{ bet.a }}A {% endif %}
+                    {% if bet.c %}{{ bet.c }}C {% endif %}
+                    {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
+                </div>
                 <div>GT={{ "%.2f"|format(bet.total) }}</div>
             </td>
         </tr>
@@ -46,5 +54,23 @@
 {% else %}
     <p>❗ 没有记录</p>
 {% endfor %}
+
+<!-- 删除下注 JS -->
+<script>
+function confirmCancel(id) {
+    if (confirm("确认是否废除该下注？")) {
+        fetch(`/cancel_bet/${id}`, {
+            method: 'POST',
+        }).then(res => {
+            if (res.ok) {
+                alert("✅ 已废除");
+                window.location.reload();
+            } else {
+                alert("❌ 废除失败");
+            }
+        });
+    }
+}
+</script>
 
 {% endblock %}
