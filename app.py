@@ -103,7 +103,7 @@ def bet():
         flash("✅ 成功提交下注记录")
         return redirect('/bet')
 
-    return render_template('bet.html', date_today=date_today, timedelta=timedelta, results=results)
+    return render_template('bet.html', date_today=date_today, timedelta=timedelta, results=results, agents=agents)
 
 @app.route('/report')
 @login_required
