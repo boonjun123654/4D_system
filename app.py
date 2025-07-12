@@ -143,5 +143,29 @@ def manage_agents():
     agents = Agent4D.query.all()
     return render_template('manage_agents.html', agents=agents)
 
+@app.route('/admin/agents/<int:agent_id>/update_password', methods=['POST'])
+def update_agent_password(agent_id):
+    new_pw = request.form.get('new_password')
+    agent = Agent4D.query.get(agent_id)
+    if agent and new_pw:
+        agent.password = new_pw
+        db.session.commit()
+        flash(f"✅ 已更新 {agent.username} 密码")
+    else:
+        flash("❌ 更新失败")
+    return redirect('/admin/agents')
+
+
+@app.route('/admin/agents/<int:agent_id>/delete', methods=['POST'])
+def delete_agent(agent_id):
+    agent = Agent4D.query.get(agent_id)
+    if agent:
+        db.session.delete(agent)
+        db.session.commit()
+        flash(f"✅ 已删除代理 {agent.username}")
+    else:
+        flash("❌ 删除失败")
+    return redirect('/admin/agents')
+
 if __name__ == '__main__':
     app.run(debug=True)
