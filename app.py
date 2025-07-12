@@ -144,6 +144,8 @@ def history():
 
 @app.route('/admin/agents', methods=['GET', 'POST'])
 def manage_agents():
+    if session.get('role') != 'admin':
+        return redirect('/')
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
