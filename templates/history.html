@@ -42,7 +42,7 @@
                     {% if bet.c %}{{ "%.1f"|format(bet.c)|replace(".0", "") }}C {% endif %}
                     {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
                 </div>
-                <div>GT={{ "%.2f"|format(bet.total) }}</div>
+                <div>GT={{ "%.2f"|format(bet.total)|replace(".00", "") }}</div>
             </div>
 
             <!-- 操作按钮 -->
