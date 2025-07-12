@@ -17,3 +17,9 @@ class FourDBet(db.Model):
     dates = db.Column(db.ARRAY(db.Text), nullable=False)
     markets = db.Column(db.ARRAY(db.Text), nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+class Agent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    commission = db.Column(db.Text, nullable=False)
