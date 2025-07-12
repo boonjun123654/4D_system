@@ -91,7 +91,35 @@ def bet():
 
 @app.route('/report')
 def report():
-    return render_template('report.html')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
+    end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
+
+    # 获取指定日期范围内的下注记录
+    records = FourDBet.query.filter(
+        FourDBet.created_at >= start_date,
+        FourDBet.created_at <= end_date + timedelta(days=1)
+    ).all()
+
+    # 按代理ID分组汇总
+    agent_map = {a.id: a for a in Agent4D.query.all()}
+    report_data = defaultdict(lambda: {"sales": 0.0, "commission_rate": 0.0})
+
+    for r in records:
+        agent_id = r.agent_id or 0
+        report_data[agent_id]["sales"] += r.total
+        if agent_id in agent_map:
+            report_data[agent_id]["commission_rate"] = agent_map[agent_id].commission
+
+    # 添加代理用户名
+    for agent_id, data in report_data.items():
+        data["username"] = agent_map[agent_id].username if agent_id in agent_map else "未绑定"
+        data["commission"] = round(data["sales"] * data["commission_rate"], 2)
+        data["win_amount"] = 0  # 待开发
+        data["net"] = round(data["win_amount"] - data["commission"], 2)
+
+    return render_template('report.html', report_data=report_data, start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d"))
 
 @app.route('/history')
 def history():
