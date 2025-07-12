@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, flash
 from odds_config import odds
 from datetime import datetime, timedelta
 from utils import calculate_payout
-from models import db, FourDBet,Agent
+from models import db, FourDBet,Agent4D
 from collections import defaultdict
 from app import app, db
 import os
