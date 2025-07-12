@@ -36,10 +36,10 @@
                 {% endfor %}
                 <div>
                     {{ bet.number }} =
-                    {% if bet.b %}{{ bet.b }}B {% endif %}
-                    {% if bet.s %}{{ bet.s }}S {% endif %}
-                    {% if bet.a %}{{ bet.a }}A {% endif %}
-                    {% if bet.c %}{{ bet.c }}C {% endif %}
+                    {% if bet.b %}{{ "%.1f"|format(bet.b)|replace(".0", "") }}B {% endif %}
+                    {% if bet.s %}{{ "%.1f"|format(bet.s)|replace(".0", "") }}S {% endif %}
+                    {% if bet.a %}{{ "%.1f"|format(bet.a)|replace(".0", "") }}A {% endif %}
+                    {% if bet.c %}{{ "%.1f"|format(bet.c)|replace(".0", "") }}C {% endif %}
                     {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
                 </div>
                 <div>GT={{ "%.2f"|format(bet.total) }}</div>
