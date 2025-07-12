@@ -5,7 +5,7 @@ class FourDBet(db.Model):
     __tablename__ = '4DBet'
 
     id = db.Column(db.Integer, primary_key=True)
-    agent_id = db.Column(db.String)  # 可留空，后续可绑定
+    agent_id = db.Column(db.String, nullable=False)
     number = db.Column(db.String(4), nullable=False)
     type = db.Column(db.String(10), nullable=False)
     b = db.Column(db.Numeric(10, 2), default=0)
