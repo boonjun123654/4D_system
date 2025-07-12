@@ -40,6 +40,11 @@ def bet():
     date_today = datetime.today()
     results = []
 
+    if session.get('role') == 'admin':
+        agents = Agent4D.query.all()
+    else:
+        agents = []
+
     if request.method == 'POST':
         for i in range(1, 13):
             number = request.form.get(f'number{i}', '').strip()
@@ -80,12 +85,6 @@ def bet():
 
             factor = get_comb_count(number) if bet_type == 'Box' else 1
             total = (B + S + A + C) * factor * len(dates) * len(markets)
-
-            if session.get('role') == 'admin':
-                agent_id = 'admin'
-            else:
-                agent = Agent4D.query.filter_by(username=session['username']).first()
-                agent_id = agent.id if agent else None
 
             bet = FourDBet(
                 agent_id=agent_id,
