@@ -2,27 +2,41 @@
 {% block content %}
 <h2>财务报表</h2>
 
-<form method="get">
-    <label for="date">选择日期：</label>
-    <input type="date" name="date">
-    <button type="submit">查询</button>
+<form method="get" action="/report">
+    <label>日期范围：</label>
+    <input type="date" name="start_date" value="{{ start_date }}">
+    <input type="date" name="end_date" value="{{ end_date }}">
+    <button type="submit">查找</button>
 </form>
 
-<br>
-<table border="1" cellpadding="5">
-    <thead>
+<hr>
+
+<table border="1" cellpadding="6" cellspacing="0" style="margin-top: 20px;">
+    <thead style="background-color: #f2f2f2;">
         <tr>
-            <th>日期</th>
-            <th>下注总额 (RM)</th>
-            <th>佣金 (RM)</th>
+            <th>代理账号</th>
+            <th>营业额</th>
+            <th>佣金</th>
+            <th>中奖金额</th>
+            <th>总数</th>
         </tr>
     </thead>
     <tbody>
+        {% for agent in report_data %}
         <tr>
-            <td>2025-07-07</td>
-            <td>1020.00</td>
-            <td>30.60</td>
+            <td>{{ agent.username }}</td>
+            <td>{{ agent.sales | round(2) }}</td>
+            <td>{{ agent.commission | round(2) }}</td>
+            <td>{{ agent.winnings | round(2) }}</td>
+            <td>{{ (agent.winnings - agent.commission) | round(2) }}</td>
         </tr>
+        {% endfor %}
+        {% if not report_data %}
+        <tr>
+            <td colspan="5">无数据</td>
+        </tr>
+        {% endif %}
     </tbody>
 </table>
+
 {% endblock %}
