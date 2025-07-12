@@ -118,10 +118,9 @@ def manage_agents():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        commission_mptsbwk = request.form.get('commission_mptsbwk')
-        commission_he = request.form.get('commission_he')
+        commission = request.form.get('commission')
 
-        if not all([username, password, commission_mptsbwk, commission_he]):
+        if not username or not password or not commission:
             flash("❗ 请填写完整信息")
         else:
             existing = Agent4D.query.filter_by(username=username).first()
@@ -131,8 +130,7 @@ def manage_agents():
                 agent = Agent4D(
                     username=username,
                     password=password,
-                    commission_mptsbwk=float(commission_mptsbwk),
-                    commission_he=float(commission_he)
+                    commission=commission
                 )
                 db.session.add(agent)
                 db.session.commit()
