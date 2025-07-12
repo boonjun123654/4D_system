@@ -1,7 +1,23 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>下注页面</h2>
+<h2>下注页面</h2>
+
+{% if session.get('role') == 'admin' %}
 <form method="post" onsubmit="return handleBet();">
+    <div style="margin-bottom: 15px;">
+        <label>选择代理用户：</label>
+        <select name="agent_id" required>
+            <option value="">-- 请选择代理 --</option>
+            {% for agent in agents %}
+                <option value="{{ agent.id }}">{{ agent.username }}</option>
+            {% endfor %}
+        </select>
+    </div>
+{% else %}
+<form method="post" onsubmit="return handleBet();">
+{% endif %}
+
     <table border="1" cellpadding="5">
         <thead>
             <tr>
