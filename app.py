@@ -62,6 +62,7 @@ def bet():
             number = number.zfill(4)
 
             bet_type = request.form.get(f'type{i}', '正字')
+            win_amount = float(request.form.get(f"win_amount{i}") or 0)
             B = float(request.form.get(f'B{i}', 0) or 0)
             S = float(request.form.get(f'S{i}', 0) or 0)
             A = float(request.form.get(f'A{i}', 0) or 0)
