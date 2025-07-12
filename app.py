@@ -1,14 +1,11 @@
-from flask import Flask, render_template, request, redirect, flash
+from flask import Flask, render_template, request, redirect, flash, session
 from odds_config import odds
-from flask import session, url_for
 from datetime import datetime, timedelta
 from utils import calculate_payout
-from models import db, FourDBet,Agent4D
+from models import db, FourDBet, Agent4D
 from collections import defaultdict
+from functools import wraps
 import os
-
-value = odds["M"]["S"]["1st"]
-print("M 市场 小 投注 头奖赔率 =", value)
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
@@ -19,11 +16,26 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+# 登录保护装饰器
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if 'username' not in session:
+            return redirect('/login')
+        return view_func(*args, **kwargs)
+    return wrapper
+
 @app.route('/')
 def index():
-    return redirect('/login')
+    if 'username' not in session:
+        return redirect('/login')
+    if session.get('role') == 'admin':
+        return redirect('/report')
+    else:
+        return redirect('/bet')
 
 @app.route('/bet', methods=['GET', 'POST'])
+@login_required
 def bet():
     date_today = datetime.today()
     results = []
@@ -41,14 +53,12 @@ def bet():
             A = float(request.form.get(f'A{i}', 0) or 0)
             C = float(request.form.get(f'C{i}', 0) or 0)
 
-            # 日期
             dates = [
                 (date_today + timedelta(days=d)).strftime("%d/%m")
                 for d in range(7)
                 if request.form.get(f'date{i}_{d}') == 'on'
             ]
 
-            # 市场
             markets = [
                 m for m in ['M','P','T','S','B','K','W','H','E']
                 if request.form.get(f'market{i}_{m}') == 'on'
@@ -57,7 +67,6 @@ def bet():
             if not dates or not markets:
                 continue
 
-            # 组合数计算
             def get_comb_count(n):
                 digits = list(n)
                 counts = {d: digits.count(d) for d in set(digits)}
@@ -73,7 +82,7 @@ def bet():
             total = (B + S + A + C) * factor * len(dates) * len(markets)
 
             bet = FourDBet(
-                agent_id=None,
+                agent_id=None if session.get('role') == 'admin' else Agent4D.query.filter_by(username=session['username']).first().id,
                 number=number,
                 type=bet_type,
                 b=B, s=S, a=A, c=C,
@@ -91,19 +100,18 @@ def bet():
     return render_template('bet.html', date_today=date_today, timedelta=timedelta, results=results)
 
 @app.route('/report')
+@login_required
 def report():
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
 
-    # 获取指定日期范围内的下注记录
     records = FourDBet.query.filter(
         FourDBet.created_at >= start_date,
         FourDBet.created_at <= end_date + timedelta(days=1)
     ).all()
 
-    # 按代理ID分组汇总
     agent_map = {a.id: a for a in Agent4D.query.all()}
     report_data = defaultdict(lambda: {"sales": 0.0, "commission_rate": 0.0})
 
@@ -113,28 +121,34 @@ def report():
         if agent_id in agent_map:
             report_data[agent_id]["commission_rate"] = agent_map[agent_id].commission
 
-    # 添加代理用户名
     for agent_id, data in report_data.items():
         data["username"] = agent_map[agent_id].username if agent_id in agent_map else "未绑定"
         data["commission"] = round(data["sales"] * data["commission_rate"], 2)
-        data["win_amount"] = 0  # 待开发
+        data["win_amount"] = 0
         data["net"] = round(data["win_amount"] - data["commission"], 2)
 
     return render_template('report.html', report_data=report_data, start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d"))
 
 @app.route('/history')
+@login_required
 def history():
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
 
-    records = FourDBet.query.filter(
+    query = FourDBet.query.filter(
         FourDBet.created_at >= start_date,
         FourDBet.created_at <= end_date + timedelta(days=1)
-    ).order_by(FourDBet.created_at.desc()).all()
+    )
 
-    # 按日期归组
+    # 限制代理只能看到自己的记录
+    if session.get('role') == 'agent':
+        agent = Agent4D.query.filter_by(username=session['username']).first()
+        query = query.filter_by(agent_id=agent.id)
+
+    records = query.order_by(FourDBet.created_at.desc()).all()
+
     grouped = defaultdict(list)
     for r in records:
         date_key = r.created_at.strftime("%Y-%m-%d")
@@ -143,6 +157,7 @@ def history():
     return render_template("history.html", grouped=grouped, start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d"))
 
 @app.route('/admin/agents', methods=['GET', 'POST'])
+@login_required
 def manage_agents():
     if session.get('role') != 'admin':
         return redirect('/')
@@ -158,11 +173,7 @@ def manage_agents():
             if existing:
                 flash("❌ 用户名已存在")
             else:
-                agent = Agent4D(
-                    username=username,
-                    password=password,
-                    commission=commission
-                )
+                agent = Agent4D(username=username, password=password, commission=commission)
                 db.session.add(agent)
                 db.session.commit()
                 flash(f"✅ 成功创建代理 {username}")
@@ -173,7 +184,10 @@ def manage_agents():
     return render_template('manage_agents.html', agents=agents)
 
 @app.route('/admin/agents/<int:agent_id>/update_password', methods=['POST'])
+@login_required
 def update_agent_password(agent_id):
+    if session.get('role') != 'admin':
+        return redirect('/')
     new_pw = request.form.get('new_password')
     agent = Agent4D.query.get(agent_id)
     if agent and new_pw:
@@ -184,9 +198,11 @@ def update_agent_password(agent_id):
         flash("❌ 更新失败")
     return redirect('/admin/agents')
 
-
 @app.route('/admin/agents/<int:agent_id>/delete', methods=['POST'])
+@login_required
 def delete_agent(agent_id):
+    if session.get('role') != 'admin':
+        return redirect('/')
     agent = Agent4D.query.get(agent_id)
     if agent:
         db.session.delete(agent)
@@ -202,19 +218,15 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # 假设 admin 固定账号为 admin/admin123
         if username == 'admin' and password == 'admin123':
             session['username'] = 'admin'
             session['role'] = 'admin'
             return redirect('/')
-
-        # 否则尝试代理登录
         agent = Agent4D.query.filter_by(username=username, password=password).first()
         if agent:
             session['username'] = agent.username
             session['role'] = 'agent'
             return redirect('/')
-
         flash("❌ 登录失败，请检查用户名或密码")
 
     return render_template('login.html')
