@@ -21,7 +21,7 @@ with app.app_context():
 
 @app.route('/')
 def index():
-    return render_template('index.html', odds=odds)
+    return redirect('/login')
 
 @app.route('/bet', methods=['GET', 'POST'])
 def bet():
