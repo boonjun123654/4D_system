@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>代理管理</h2>
+
+<!-- 创建代理表单 -->
+<form method="POST" action="/admin/agents" style="margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; width: 100%; max-width: 500px;">
+    <h3>创建新代理</h3>
+    <label>User ID：<input type="text" name="username" required></label><br><br>
+    <label>登录密码：<input type="password" name="password" required></label><br><br>
+    <label>佣金比例（%）：<br>
+        <small>M/P/T/S/B/W/K = 26%，H/E = 19%</small><br>
+        <input type="text" name="commission" value="M:26,P:26,T:26,S:26,B:26,W:26,K:26,H:19,E:19" required style="width: 100%;">
+    </label><br><br>
+    <button type="submit">➕ 创建代理</button>
+</form>
+
+<!-- 已创建代理列表 -->
+<h3>已创建代理</h3>
+<table border="1" cellpadding="8" cellspacing="0">
+    <tr style="background:#f0f0f0;">
+        <th>User ID</th>
+        <th>佣金比例</th>
+    </tr>
+    {% for agent in agents %}
+    <tr>
+        <td>{{ agent.username }}</td>
+        <td>{{ agent.commission }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}
