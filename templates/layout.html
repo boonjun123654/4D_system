@@ -11,7 +11,18 @@
         <a href="/bet">下注</a> |
         <a href="/report">财务报表</a> |
         <a href="/history">查单</a>
-        <a href="/admin/agents">代理</a> |
+    
+        {% if session.get('role') == 'admin' %}
+            | <a href="/admin/agents">代理</a>
+        {% endif %}
+    
+        <span style="float:right;">
+            {% if session.get('username') %}
+                👤 {{ session['username'] }} | <a href="/logout">登出</a>
+            {% else %}
+                <a href="/login">登录</a>
+            {% endif %}
+        </span>
     </nav>
     <hr>
     {% block content %}{% endblock %}
