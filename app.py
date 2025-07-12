@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, flash
 from odds_config import odds
+from flask import session, url_for
 from datetime import datetime, timedelta
 from utils import calculate_payout
 from models import db, FourDBet,Agent4D
@@ -192,6 +193,34 @@ def delete_agent(agent_id):
     else:
         flash("❌ 删除失败")
     return redirect('/admin/agents')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # 假设 admin 固定账号为 admin/admin123
+        if username == 'admin' and password == 'admin123':
+            session['username'] = 'admin'
+            session['role'] = 'admin'
+            return redirect('/')
+
+        # 否则尝试代理登录
+        agent = Agent4D.query.filter_by(username=username, password=password).first()
+        if agent:
+            session['username'] = agent.username
+            session['role'] = 'agent'
+            return redirect('/')
+
+        flash("❌ 登录失败，请检查用户名或密码")
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')
 
 if __name__ == '__main__':
     app.run(debug=True)
