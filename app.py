@@ -115,23 +115,24 @@ def history():
 
 @app.route('/admin/agents', methods=['GET', 'POST'])
 def manage_agents():
-    # 后续可加管理员验证 session['role'] == 'admin'
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        commission = request.form.get('commission')
+        commission_mptsbwk = request.form.get('commission_mptsbwk')
+        commission_he = request.form.get('commission_he')
 
-        if not username or not password or not commission:
+        if not all([username, password, commission_mptsbwk, commission_he]):
             flash("❗ 请填写完整信息")
         else:
-            existing = Agent.query.filter_by(username=username).first()
+            existing = Agent4D.query.filter_by(username=username).first()
             if existing:
                 flash("❌ 用户名已存在")
             else:
-                agent = Agent(
+                agent = Agent4D(
                     username=username,
-                    password=password,  # 可加密处理
-                    commission=commission
+                    password=password,
+                    commission_mptsbwk=float(commission_mptsbwk),
+                    commission_he=float(commission_he)
                 )
                 db.session.add(agent)
                 db.session.commit()
@@ -139,7 +140,7 @@ def manage_agents():
 
         return redirect('/admin/agents')
 
-    agents = Agent.query.all()
+    agents = Agent4D.query.all()
     return render_template('manage_agents.html', agents=agents)
 
 if __name__ == '__main__':
