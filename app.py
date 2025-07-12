@@ -46,6 +46,15 @@ def bet():
         agents = []
 
     if request.method == 'POST':
+        # 决定 agent_id
+        if session.get('role') == 'admin':
+            selected_agent_id = request.form.get('agent_id')
+            agent = Agent4D.query.get(int(selected_agent_id)) if selected_agent_id else None
+        else:
+            agent = Agent4D.query.filter_by(username=session['username']).first()
+
+        agent_id = agent.username if agent else None
+
         for i in range(1, 13):
             number = request.form.get(f'number{i}', '').strip()
             if not number or not number.isdigit():
@@ -117,17 +126,17 @@ def report():
         FourDBet.created_at <= end_date + timedelta(days=1)
     ).all()
 
-    agent_map = {a.id: a for a in Agent4D.query.all()}
+    agent_map = {a.username: a for a in Agent4D.query.all()}
     report_data = defaultdict(lambda: {"sales": 0.0, "commission_rate": 0.0})
 
     for r in records:
-        agent_id = r.agent_id or 0
+        agent_id = r.agent_id or "未绑定"
         report_data[agent_id]["sales"] += r.total
         if agent_id in agent_map:
             report_data[agent_id]["commission_rate"] = agent_map[agent_id].commission
 
     for agent_id, data in report_data.items():
-        data["username"] = agent_map[agent_id].username if agent_id in agent_map else "未绑定"
+        data["username"] = agent_id
         data["commission"] = round(data["sales"] * data["commission_rate"], 2)
         data["win_amount"] = 0
         data["net"] = round(data["win_amount"] - data["commission"], 2)
@@ -147,10 +156,8 @@ def history():
         FourDBet.created_at <= end_date + timedelta(days=1)
     )
 
-    # 限制代理只能看到自己的记录
     if session.get('role') == 'agent':
-        agent = Agent4D.query.filter_by(username=session['username']).first()
-        query = query.filter_by(agent_id=agent.id)
+        query = query.filter_by(agent_id=session['username'])
 
     records = query.order_by(FourDBet.created_at.desc()).all()
 
