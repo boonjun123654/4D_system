@@ -148,6 +148,8 @@ def report():
 def history():
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
+    selected_agent = request.args.get('agent_id')
+
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
 
@@ -156,8 +158,11 @@ def history():
         FourDBet.created_at <= end_date + timedelta(days=1)
     )
 
+    # 筛选代理
     if session.get('role') == 'agent':
         query = query.filter_by(agent_id=session['username'])
+    elif selected_agent:
+        query = query.filter_by(agent_id=selected_agent)
 
     records = query.order_by(FourDBet.created_at.desc()).all()
 
@@ -166,7 +171,15 @@ def history():
         date_key = r.created_at.strftime("%Y-%m-%d")
         grouped[date_key].append(r)
 
-    return render_template("history.html", grouped=grouped, start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d"))
+    agents = Agent4D.query.all() if session.get('role') == 'admin' else []
+
+    return render_template(
+        "history.html",
+        grouped=grouped,
+        start_date=start_date.strftime("%Y-%m-%d"),
+        end_date=end_date.strftime("%Y-%m-%d"),
+        agents=agents
+    )
 
 @app.route('/admin/agents', methods=['GET', 'POST'])
 @login_required
