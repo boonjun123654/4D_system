@@ -45,14 +45,18 @@
                            pattern="[0-9]{4}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
                            style="width: 80px;">
                 </td>
-                <td><input type="text" name="B{{ i }}" maxlength="2" inputmode="numeric"
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
-                <td><input type="text" name="S{{ i }}" maxlength="2" inputmode="numeric"
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
-                <td><input type="text" name="A{{ i }}" maxlength="2" inputmode="numeric"
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
-                <td><input type="text" name="C{{ i }}" maxlength="2" inputmode="numeric"
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 40px;"></td>
+                <td><input type="text" name="B{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
+                <td><input type="text" name="S{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
+                <td><input type="text" name="A{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
+                <td><input type="text" name="C{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
 
                 {% for d in range(7) %}
                     <td><input type="checkbox" name="date{{ i }}_{{ d }}" class="date_col_{{ d }}" style="width:18px;height:18px;"></td>
