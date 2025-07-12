@@ -2,8 +2,9 @@ from flask import Flask, render_template, request, redirect, flash
 from odds_config import odds
 from datetime import datetime, timedelta
 from utils import calculate_payout
-from models import db, FourDBet
+from models import db, FourDBet,Agent
 from collections import defaultdict
+from app import app, db
 import os
 
 value = odds["M"]["S"]["1st"]
@@ -112,6 +113,35 @@ def history():
         grouped[date_key].append(r)
 
     return render_template("history.html", grouped=grouped, start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d"))
+
+@app.route('/admin/agents', methods=['GET', 'POST'])
+def manage_agents():
+    # 后续可加管理员验证 session['role'] == 'admin'
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        commission = request.form.get('commission')
+
+        if not username or not password or not commission:
+            flash("❗ 请填写完整信息")
+        else:
+            existing = Agent.query.filter_by(username=username).first()
+            if existing:
+                flash("❌ 用户名已存在")
+            else:
+                agent = Agent(
+                    username=username,
+                    password=password,  # 可加密处理
+                    commission=commission
+                )
+                db.session.add(agent)
+                db.session.commit()
+                flash(f"✅ 成功创建代理 {username}")
+
+        return redirect('/admin/agents')
+
+    agents = Agent.query.all()
+    return render_template('manage_agents.html', agents=agents)
 
 if __name__ == '__main__':
     app.run(debug=True)
