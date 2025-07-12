@@ -181,6 +181,7 @@ function updateTotals() {
         // 💰中奖金额计算
         const win = getHighestWin(markets, B, S, A, C, dateCount, type, number);
         document.querySelector(`input[name="win_amount${i}"]`).value = win.toFixed(2);
+        document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
     }
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
