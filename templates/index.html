@@ -1,43 +1,45 @@
 {% extends "layout.html" %}
 {% block content %}
+
 <h2>赔率表</h2>
 
-<table border="1" cellpadding="6" cellspacing="0" style="margin-top: 20px; border-collapse: collapse; text-align: center;">
-    <thead style="background-color: #f2f2f2;">
-        <tr>
-            <th rowspan="2">市场</th>
-            <th colspan="5">B</th>
-            <th colspan="3">S</th>
-            <th>A</th>
-            <th colspan="3">C</th>
-        </tr>
-        <tr>
-            <th>1st</th><th>2nd</th><th>3rd</th><th>Special</th><th>Consolation</th>
-            <th>1st</th><th>2nd</th><th>3rd</th>
-            <th>1st</th>
-            <th>1st</th><th>2nd</th><th>3rd</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for market, types in odds.items() %}
-        <tr>
-            <td><strong>{{ market }}</strong></td>
-            <!-- B -->
-            {% for key in ['1st', '2nd', '3rd', 'special', 'consolation'] %}
-                <td>{{ types.get('B', {}).get(key, '-') }}</td>
-            {% endfor %}
-            <!-- S -->
-            {% for key in ['1st', '2nd', '3rd'] %}
-                <td>{{ types.get('S', {}).get(key, '-') }}</td>
-            {% endfor %}
-            <!-- A -->
-            <td>{{ types.get('A', {}).get('1st', '-') }}</td>
-            <!-- C -->
-            {% for key in ['1st', '2nd', '3rd'] %}
-                <td>{{ types.get('C', {}).get(key, '-') }}</td>
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!-- 标签页按钮 -->
+<div style="margin-bottom: 20px;">
+    <button onclick="showTab('A')" style="padding: 8px 16px; margin-right: 10px;">Ground A (MPTSBWK + HE)</button>
+    <button onclick="showTab('B')" style="padding: 8px 16px;">Ground B (MPTSHEBWK)</button>
+</div>
+
+<!-- 表格容器 -->
+<div id="tabA" class="odds-tab">
+    {% include 'odds_table_a.html' %}
+</div>
+<div id="tabB" class="odds-tab" style="display: none;">
+    {% include 'odds_table_b.html' %}
+</div>
+
+<script>
+function showTab(group) {
+    document.getElementById('tabA').style.display = (group === 'A') ? 'block' : 'none';
+    document.getElementById('tabB').style.display = (group === 'B') ? 'block' : 'none';
+}
+</script>
+
+<style>
+.odds-tab table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 14px;
+    text-align: center;
+}
+.odds-tab th, .odds-tab td {
+    border: 1px solid #ccc;
+    padding: 8px;
+}
+.odds-tab th {
+    background-color: #932b8d;
+    color: white;
+}
+</style>
+
 {% endblock %}
