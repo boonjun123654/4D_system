@@ -132,7 +132,7 @@ def report():
 
     for r in records:
         agent_id = r.agent_id or "未绑定"
-        report_data[agent_id]["sales"] += r.total
+        report_data[agent_id]["sales"] += float(r.total)
         if agent_id in agent_map:
             report_data[agent_id]["commission_rate"] = agent_map[agent_id].commission
 
