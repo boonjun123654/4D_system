@@ -326,5 +326,36 @@ def ocr_upload():
 
     return render_template('admin_ocr_upload.html', results=results)
 
+@app.route('/admin/draw_input', methods=['GET', 'POST'])
+def admin_draw_input():
+    if session.get('role') != 'admin':
+        return redirect('/')
+
+    if request.method == 'POST':
+        for market in ['M', 'P', 'T', 'S', 'B', 'K', 'W', 'H', 'E']:
+            date = request.form.get(f'date_{market}')
+            first = request.form.get(f'first_{market}')
+            second = request.form.get(f'second_{market}')
+            third = request.form.get(f'third_{market}')
+            special = request.form.get(f'special_{market}')
+            consolation = request.form.get(f'consolation_{market}')
+
+            if first and second and third:
+                result = DrawResult4D(
+                    date=date,
+                    market=market,
+                    first=first,
+                    second=second,
+                    third=third,
+                    special=special,
+                    consolation=consolation
+                )
+                db.session.add(result)
+        db.session.commit()
+        flash("✅ 成功上传开奖成绩")
+        return redirect('/admin/draw_input')
+
+    return render_template('admin_draw_input.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
