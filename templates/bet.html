@@ -4,9 +4,10 @@
 
 {% if session.get('role') == 'admin' %}
 <form method="post" onsubmit="return handleBet();">
-    <div style="margin-bottom: 15px;">
-        <label>选择代理用户：</label>
-        <select name="agent_id" required>
+    <div style="margin: 20px 0; display: flex; align-items: center; gap: 10px;">
+        <label for="agent_id" style="font-weight: bold; font-size: 16px;">选择代理用户：</label>
+        <select id="agent_id" name="agent_id" required
+                style="padding: 6px 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px;">
             <option value="">-- 请选择代理 --</option>
             {% for agent in agents %}
                 <option value="{{ agent.id }}">{{ agent.username }}</option>
