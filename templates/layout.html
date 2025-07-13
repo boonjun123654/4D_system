@@ -5,16 +5,66 @@
     <title>4D 后台</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
+        body {
+            margin: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #fff;
+        }
+
         nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background-color: #f8f8f8;
+            padding: 10px 20px;
+            border-bottom: 1px solid #ccc;
         }
+
         .nav-left a {
-            margin-right: 10px;
+            margin-right: 20px;
+            text-decoration: none;
+            color: #4b0082;
+            font-weight: bold;
+            font-size: 16px;
+            position: relative;
         }
+
+        .nav-left a::after {
+            content: '';
+            display: block;
+            height: 2px;
+            background: #4b0082;
+            transition: width 0.3s;
+            width: 0;
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+        }
+
+        .nav-left a:hover::after {
+            width: 100%;
+        }
+
+        .nav-left a:hover {
+            color: #000;
+        }
+
         .nav-right {
             font-size: 14px;
+            color: #333;
+        }
+
+        .nav-right a {
+            text-decoration: none;
+            color: #4b0082;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        hr {
+            margin: 0;
+            border: none;
+            border-top: 1px solid #ccc;
         }
     </style>
 </head>
