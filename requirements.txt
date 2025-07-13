@@ -4,3 +4,4 @@ apscheduler
 gunicorn
 pytesseract
 Pillow
+pytz
