@@ -200,19 +200,24 @@ def history():
 def manage_agents():
     if session.get('role') != 'admin':
         return redirect('/')
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        commission = request.form.get('commission')
+        commission_group = request.form.get('commission_group')  # 修改点：读取 A/B
 
-        if not username or not password or not commission:
+        if not username or not password or not commission_group:
             flash("❗ 请填写完整信息")
         else:
             existing = Agent4D.query.filter_by(username=username).first()
             if existing:
                 flash("❌ 用户名已存在")
             else:
-                agent = Agent4D(username=username, password=password, commission=commission)
+                agent = Agent4D(
+                    username=username,
+                    password=password,
+                    commission_group=commission_group  # 修改点：保存为 A/B
+                )
                 db.session.add(agent)
                 db.session.commit()
                 flash(f"✅ 成功创建代理 {username}")
