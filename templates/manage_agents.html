@@ -1,46 +1,61 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<h2>创建新代理</h2>
-<form method="post" action="/admin/agents">
-    <label>User ID: <input type="text" name="username"></label>
-    <label>密码: <input type="text" name="password"></label>
-    <label>佣金方案：
-        <select name="commission_group" required>
+<h2 style="margin-top: 20px;">➕ 创建新代理</h2>
+<form method="post" action="/admin/agents" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-bottom: 30px;">
+    <div>
+        <label><strong>User ID:</strong></label><br>
+        <input type="text" name="username" required style="padding: 6px; width: 150px;">
+    </div>
+    <div>
+        <label><strong>密码:</strong></label><br>
+        <input type="text" name="password" required style="padding: 6px; width: 150px;">
+    </div>
+    <div>
+        <label><strong>佣金方案:</strong></label><br>
+        <select name="commission_group" required style="padding: 6px; width: 230px;">
             <option value="A">Ground A (MPTSBWK=26%, HE=19%)</option>
             <option value="B">Ground B (MPTSHEBWK=22%)</option>
         </select>
-    </label>
-    <button type="submit">创建代理</button>
+    </div>
+    <div style="align-self: flex-end;">
+        <button type="submit" style="padding: 8px 20px; font-size: 15px;">✅ 创建代理</button>
+    </div>
 </form>
 
 <hr>
 
-<h2>已创建代理</h2>
-<table border="1" cellpadding="8">
-    <tr>
-        <th>User ID</th>
-        <th>佣金方案</th>
-        <th>密码</th>
-        <th>操作</th>
-    </tr>
-    {% for agent in agents %}
-    <tr>
-        <td>{{ agent.username }}</td>
-        <td>{{ "Ground " ~ agent.commission_group }}</td>
-        <td>
-            <form method="post" action="/admin/agents/{{ agent.id }}/update_password" style="display:inline;">
-                <input type="text" name="new_password" placeholder="新密码">
-                <button type="submit">修改密码</button>
-            </form>
-        </td>
-        <td>
-            <form method="post" action="/admin/agents/{{ agent.id }}/delete" onsubmit="return confirm('确认删除此代理？');" style="display:inline;">
-                <button type="submit" style="color:red;">删除</button>
-            </form>
-        </td>
-    </tr>
-    {% endfor %}
+<h2>👥 已创建代理</h2>
+<table border="1" cellpadding="10" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+    <thead style="background: #f2f2f2;">
+        <tr>
+            <th style="text-align: left;">User ID</th>
+            <th>佣金方案</th>
+            <th style="text-align: center;">修改密码</th>
+            <th style="text-align: center;">操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for agent in agents %}
+        <tr>
+            <td>{{ agent.username }}</td>
+            <td>Ground {{ agent.commission_group }}</td>
+            <td style="text-align: center;">
+                <form method="post" action="/admin/agents/{{ agent.id }}/update_password" style="display: inline-flex; gap: 6px;">
+                    <input type="text" name="new_password" placeholder="新密码" style="padding: 5px;">
+                    <button type="submit" style="padding: 6px 12px;">修改密码</button>
+                </form>
+            </td>
+            <td style="text-align: center;">
+                <form method="post" action="/admin/agents/{{ agent.id }}/delete" onsubmit="return confirm('确认删除此代理？');" style="display:inline;">
+                    <button type="submit" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px;">
+                        删除
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
 
 {% endblock %}
