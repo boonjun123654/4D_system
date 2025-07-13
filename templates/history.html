@@ -58,6 +58,9 @@
                     {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
                 </div>
                 <div>GT={{ "%.2f"|format(bet.total)|replace(".00", "") }}</div>
+                {% if bet.win_amount %}
+                    <div>💰Win={{ "%.2f"|format(bet.win_amount)|replace(".00", "") }}</div>
+                {% endif %}
             </div>
 
             <!-- 操作按钮 -->
