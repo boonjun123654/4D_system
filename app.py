@@ -49,7 +49,7 @@ def bet():
 
     if request.method == 'POST':
         # ✅ 添加下注时间限制检查
-        now = datetime.now()
+        now = datetime.now(timezone('Asia/Kuala_Lumpur'))
         today_str = now.strftime('%d/%m')
         selected_dates = set()
 
