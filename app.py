@@ -122,36 +122,60 @@ def report():
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
 
+    # 获取下注记录
     records = FourDBet.query.filter(
         FourDBet.created_at >= start_date,
         FourDBet.created_at <= end_date + timedelta(days=1)
     ).all()
 
-    agent_map = {a.username: a for a in Agent4D.query.all()}
+    # 所有代理
+    agents = Agent4D.query.all()
+    agent_map = {a.username: a for a in agents}
+
+    # Ground A：MPTSBWK=26%，HE=19%
+    # Ground B：MPTSHEBWK=22%
+    ground_commission = {
+        "A": {
+            "M": 0.26, "P": 0.26, "T": 0.26, "S": 0.26, "B": 0.26, "W": 0.26, "K": 0.26,
+            "H": 0.19, "E": 0.19
+        },
+        "B": {
+            "M": 0.22, "P": 0.22, "T": 0.22, "S": 0.22, "H": 0.22, "E": 0.22, "B": 0.22, "W": 0.22, "K": 0.22
+        }
+    }
+
+    # 初始化报表数据
     report_data = defaultdict(lambda: {
-        "sales": 0.0,
-        "commission_rate": 0.0,
         "username": "",
+        "sales": 0.0,
         "commission": 0.0,
         "win_amount": 0.0,
-        "net": 0.0,
+        "net": 0.0
     })
 
     for r in records:
-        agent_id = r.agent_id or "未绑定"
-        report_data[agent_id]["username"] = agent_id
-        report_data[agent_id]["sales"] += float(r.total)
+        agent = agent_map.get(r.agent_id)
+        if not agent:
+            continue
 
-        if agent_id in agent_map:
-            report_data[agent_id]["commission_rate"] = float(agent_map[agent_id].commission)
+        group = agent.commission_group or 'A'
+        per_market_total = r.total / (len(r.markets) or 1)
 
-    for data in report_data.values():
-        data["commission"] = round(data["sales"] * data["commission_rate"], 2)
-        data["win_amount"] = 0.0  # 中奖金额暂不处理
-        data["net"] = round(data["win_amount"] - data["commission"], 2)
+        commission_total = 0.0
+        for m in r.markets:
+            rate = ground_commission.get(group, {}).get(m, 0)
+            commission_total += per_market_total * rate
+
+        report_data[r.agent_id]["username"] = r.agent_id
+        report_data[r.agent_id]["sales"] += r.total
+        report_data[r.agent_id]["commission"] += round(commission_total, 2)
+        report_data[r.agent_id]["win_amount"] += round(r.win_amount, 2)
+        report_data[r.agent_id]["net"] = round(
+            report_data[r.agent_id]["win_amount"] - report_data[r.agent_id]["commission"], 2
+        )
 
     return render_template(
-        'report.html',
+        "report.html",
         report_data=report_data.values(),
         start_date=start_date.strftime("%Y-%m-%d"),
         end_date=end_date.strftime("%Y-%m-%d")
