@@ -128,21 +128,34 @@ def report():
     ).all()
 
     agent_map = {a.username: a for a in Agent4D.query.all()}
-    report_data = defaultdict(lambda: {"sales": 0.0, "commission_rate": 0.0})
+    report_data = defaultdict(lambda: {
+        "sales": 0.0,
+        "commission_rate": 0.0,
+        "username": "",
+        "commission": 0.0,
+        "win_amount": 0.0,
+        "net": 0.0,
+    })
 
     for r in records:
         agent_id = r.agent_id or "未绑定"
+        report_data[agent_id]["username"] = agent_id
         report_data[agent_id]["sales"] += float(r.total)
-        if agent_id in agent_map:
-            report_data[agent_id]["commission_rate"] = agent_map[agent_id].commission
 
-    for agent_id, data in report_data.items():
-        data["username"] = agent_id
+        if agent_id in agent_map:
+            report_data[agent_id]["commission_rate"] = float(agent_map[agent_id].commission)
+
+    for data in report_data.values():
         data["commission"] = round(data["sales"] * data["commission_rate"], 2)
-        data["win_amount"] = 0
+        data["win_amount"] = 0.0  # 中奖金额暂不处理
         data["net"] = round(data["win_amount"] - data["commission"], 2)
 
-    return render_template('report.html', report_data=report_data, start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d"))
+    return render_template(
+        'report.html',
+        report_data=report_data.values(),
+        start_date=start_date.strftime("%Y-%m-%d"),
+        end_date=end_date.strftime("%Y-%m-%d")
+    )
 
 @app.route('/history')
 @login_required
