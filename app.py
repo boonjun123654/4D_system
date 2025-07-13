@@ -45,6 +45,22 @@ def bet():
         agents = []
 
     if request.method == 'POST':
+        # ✅ 添加下注时间限制检查
+        now = datetime.now()
+        today_str = now.strftime('%d/%m')
+        selected_dates = set()
+
+        for i in range(1, 13):
+            for d in range(7):
+                if request.form.get(f'date{i}_{d}') == 'on':
+                    date_str = (date_today + timedelta(days=d)).strftime('%d/%m')
+                    selected_dates.add(date_str)
+
+        # ✅ 如果有下注当天的日期，并且已过晚上7点，阻止下注
+        if today_str in selected_dates and now.time() >= time(19, 0):
+            flash("⚠️ 晚上 7 点后无法下注当天的号码")
+            return redirect('/bet')
+
         # 决定 agent_id
         if session.get('role') == 'admin':
             selected_agent_id = request.form.get('agent_id')
