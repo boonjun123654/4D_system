@@ -25,3 +25,15 @@ class Agent4D(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(50), nullable=False)
     commission_group = db.Column(db.String(1), default='A')  # 'A' 或 'B'
+
+class DrawResult4D(db.Model):
+    __tablename__ = 'draw_result4d'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    market = db.Column(db.String(1), nullable=False)
+    first = db.Column(db.String(4))
+    second = db.Column(db.String(4))
+    third = db.Column(db.String(4))
+    special = db.Column(db.String(100))
+    consolation = db.Column(db.String(100))
+
