@@ -2,3 +2,5 @@ flask_sqlalchemy
 psycopg2-binary
 apscheduler
 gunicorn
+pytesseract
+Pillow
