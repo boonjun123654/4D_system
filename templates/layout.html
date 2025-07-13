@@ -70,6 +70,7 @@
 </head>
 <body>
     <nav>
+        {% if session.get('username') %}
         <div class="nav-left">
             <a href="/">赔率</a>
             <a href="/bet">下注</a>
@@ -79,6 +80,7 @@
                 <a href="/admin/agents">代理</a>
             {% endif %}
         </div>
+        {% endif %}
         <div class="nav-right">
             {% if session.get('username') %}
                 👤 {{ session['username'] }} | <a href="/logout">登出</a>
