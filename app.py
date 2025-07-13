@@ -2,10 +2,13 @@ from flask import Flask, render_template, request, redirect, flash, session
 from odds_config import odds
 from datetime import datetime, timedelta
 from utils import calculate_payout
-from models import db, FourDBet, Agent4D,DrawResult4D
+from models import db, FourDBet, Agent4D
 from collections import defaultdict
 from functools import wraps
 from decimal import Decimal
+import pytesseract
+from PIL import Image
+from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__)
@@ -304,36 +307,24 @@ def logout():
     session.clear()
     return redirect('/login')
 
-@app.route('/admin/draw_input', methods=['GET', 'POST'])
-def admin_draw_input():
+@app.route('/admin/ocr', methods=['GET', 'POST'])
+def ocr_upload():
     if session.get('role') != 'admin':
         return redirect('/')
 
+    results = ""
     if request.method == 'POST':
-        for market in ['M', 'P', 'T', 'S', 'B', 'K', 'W', 'H', 'E']:
-            date = request.form.get(f'date_{market}')
-            first = request.form.get(f'first_{market}')
-            second = request.form.get(f'second_{market}')
-            third = request.form.get(f'third_{market}')
-            special = request.form.get(f'special_{market}')
-            consolation = request.form.get(f'consolation_{market}')
+        image = request.files.get('image')
+        if image:
+            filename = secure_filename(image.filename)
+            filepath = os.path.join('uploads', filename)
+            image.save(filepath)
 
-            if first and second and third:
-                result = DrawResult4D(
-                    date=date,
-                    market=market,
-                    first=first,
-                    second=second,
-                    third=third,
-                    special=special,
-                    consolation=consolation
-                )
-                db.session.add(result)
-        db.session.commit()
-        flash("✅ 成功上传开奖成绩")
-        return redirect('/admin/draw_input')
+            # OCR 识别
+            text = pytesseract.image_to_string(Image.open(filepath), lang='eng')
+            results = text.strip()
 
-    return render_template('admin_draw_input.html')
+    return render_template('admin_ocr_upload.html', results=results)
 
 if __name__ == '__main__':
     app.run(debug=True)
