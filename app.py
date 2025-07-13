@@ -36,7 +36,9 @@ def index():
 @app.route('/bet', methods=['GET', 'POST'])
 @login_required
 def bet():
-    date_today = datetime.today()
+    malaysia = timezone('Asia/Kuala_Lumpur')
+    now = datetime.now(malaysia)
+    date_today = now.date()
     results = []
 
     if session.get('role') == 'admin':
