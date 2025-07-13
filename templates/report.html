@@ -25,18 +25,15 @@
         {% for agent in report_data %}
         <tr>
             <td>{{ agent.username }}</td>
-            <td>{{ agent.sales | round(2) }}</td>
-            <td>{{ agent.commission | round(2) }}</td>
-            <td>{{ agent.winnings | round(2) }}</td>
-            <td>{{ (agent.winnings - agent.commission) | round(2) }}</td>
+            <td>{{ "%.2f"|format(agent.sales) }}</td>
+            <td>{{ "%.2f"|format(agent.commission) }}</td>
+            <td>{{ "%.2f"|format(agent.win_amount) }}</td>
+            <td>{{ "%.2f"|format(agent.net) }}</td>
         </tr>
         {% endfor %}
         {% if not report_data %}
-        <tr>
-            <td colspan="5">无数据</td>
-        </tr>
+        <tr><td colspan="5">无数据</td></tr>
         {% endif %}
     </tbody>
 </table>
-
 {% endblock %}
