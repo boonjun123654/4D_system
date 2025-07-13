@@ -23,5 +23,5 @@ class Agent4D(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
-    commission = db.Column(db.Text, nullable=False)
+    password = db.Column(db.String(50), nullable=False)
+    commission_group = db.Column(db.String(1), default='A')  # 'A' 或 'B'
