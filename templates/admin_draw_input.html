@@ -1,0 +1,35 @@
+<!-- templates/admin_draw_input.html -->
+{% extends "layout.html" %}
+{% block content %}
+<h2>上传开奖成绩（4D）</h2>
+<form method="POST" action="/admin/draw_input">
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr>
+                <th>市场</th>
+                <th>日期</th>
+                <th>1st</th>
+                <th>2nd</th>
+                <th>3rd</th>
+                <th>Special (10个,逗号分隔)</th>
+                <th>Consolation (10个,逗号分隔)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in ['M','P','T','S','B','K','W','H','E'] %}
+            <tr>
+                <td><strong>{{ m }}</strong></td>
+                <td><input type="date" name="date_{{ m }}" required></td>
+                <td><input type="text" name="first_{{ m }}" maxlength="4"></td>
+                <td><input type="text" name="second_{{ m }}" maxlength="4"></td>
+                <td><input type="text" name="third_{{ m }}" maxlength="4"></td>
+                <td><input type="text" name="special_{{ m }}"></td>
+                <td><input type="text" name="consolation_{{ m }}"></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    <button type="submit">提交开奖</button>
+</form>
+{% endblock %}
