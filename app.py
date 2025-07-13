@@ -102,7 +102,7 @@ def bet():
                 type=bet_type,
                 b=B, s=S, a=A, c=C,
                 total=total,
-                win_amount=win_amount,,
+                win_amount=win_amount,
                 dates=dates,
                 markets=markets
             )
