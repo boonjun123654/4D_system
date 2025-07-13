@@ -1,19 +1,19 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<h2>查单</h2>
+<h2 style="margin-top: 20px;">🧾 查单记录</h2>
 
-<form method="get" action="/history" style="margin-bottom: 20px;">
-    <div style="margin-bottom: 10px;">
-        <label>日期范围：</label>
-        <input type="date" name="start_date" value="{{ start_date }}">
-        <input type="date" name="end_date" value="{{ end_date }}">
+<form method="get" action="/history" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center;">
+    <div>
+        <label><strong>日期范围：</strong></label><br>
+        <input type="date" name="start_date" value="{{ start_date }}" style="padding: 6px;">
+        <input type="date" name="end_date" value="{{ end_date }}" style="padding: 6px;">
     </div>
 
     {% if session.role == 'admin' %}
-    <div style="margin-bottom: 10px;">
-        <label>选择代理：</label>
-        <select name="agent_id" style="padding: 5px;">
+    <div>
+        <label><strong>选择代理：</strong></label><br>
+        <select name="agent_id" style="padding: 6px; width: 150px;">
             <option value="">全部</option>
             {% for agent in agents %}
                 <option value="{{ agent.username }}" {% if request.args.get('agent_id') == agent.username %}selected{% endif %}>
@@ -24,27 +24,28 @@
     </div>
     {% endif %}
 
-    <button type="submit" style="padding: 8px 20px; font-size: 16px;">查找</button>
+    <div>
+        <button type="submit" style="padding: 8px 20px; font-size: 15px;">🔍 查找</button>
+    </div>
 </form>
 
 <hr>
 
 {% for date, items in grouped.items() %}
-    <div style="background: #e0e0e0; padding: 10px; margin-top: 20px;">
-        <strong>{{ date }}</strong>
+    <div style="background: #f2f2f2; padding: 10px; margin-top: 20px; font-weight: bold;">
+        📅 {{ date }}
     </div>
 
     <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
         {% for bet in items %}
-        <div style="width: 260px; aspect-ratio: 1/1; border: 1px solid #ccc; padding: 10px; box-sizing: border-box; position: relative; font-family: monospace; display: flex; flex-direction: column;">
-
-            <!-- 代理区块 -->
-            <div style="background-color: #f5f5f5; padding: 5px 10px; border-radius: 4px; margin-bottom: 8px;">
-                <strong>代理：</strong>{{ bet.agent_id }}
+        <div style="width: 260px; border: 1px solid #ddd; padding: 10px; border-radius: 8px; background-color: #fff; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); font-family: monospace; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+            <!-- 顶部代理信息 -->
+            <div style="font-size: 14px; background: #f8f8f8; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px;">
+                👤 <strong>代理：</strong>{{ bet.agent_id }}
             </div>
 
-            <!-- 下注详情 -->
-            <div style="flex-grow: 1; overflow-y: auto; margin-bottom: 50px;">
+            <!-- 中部下注详情 -->
+            <div style="flex-grow: 1; margin-bottom: 40px; font-size: 14px;">
                 {% for d in bet.dates %}
                     <div><strong>{{ d }}</strong></div>
                     <div>{{ bet.markets | join('') }}</div>
@@ -57,31 +58,28 @@
                     {% if bet.c %}{{ "%.1f"|format(bet.c)|replace(".0", "") }}C {% endif %}
                     {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
                 </div>
-                <div>GT={{ "%.2f"|format(bet.total)|replace(".00", "") }}</div>
+                <div>🎯 GT = {{ "%.2f"|format(bet.total)|replace(".00", "") }}</div>
                 {% if bet.win_amount %}
-                    <div>WIN={{ "%.2f"|format(bet.win_amount)|replace(".00", "") }}</div>
+                    <div style="color: #28a745;">🏆 WIN = {{ "%.2f"|format(bet.win_amount)|replace(".00", "") }}</div>
                 {% endif %}
             </div>
 
-            <!-- 操作按钮 -->
-            <div style="position: absolute; bottom: 10px; left: 10px; right: 10px; display: flex; gap: 10px;">
+            <!-- 底部按钮 -->
+            <div style="display: flex; gap: 8px;">
                 <a href="/bet?ref={{ bet.id }}" style="flex: 1;">
-                    <button type="button" style="background-color:#007bff; color:white; border:none; padding:6px 0; border-radius:4px; width: 100%;">
-                        重新下注
-                    </button>
+                    <button type="button" style="width: 100%; padding: 6px; background-color:#007bff; color:white; border:none; border-radius:4px;">重新下注</button>
                 </a>
-                <button type="button" onclick="confirmCancel('{{ bet.id }}')" style="background-color:#dc3545; color:white; border:none; padding:6px 0; border-radius:4px; flex: 1;">
-                    废除下注
+                <button type="button" onclick="confirmCancel('{{ bet.id }}')" style="flex: 1; padding: 6px; background-color:#dc3545; color:white; border:none; border-radius:4px;">
+                    废除
                 </button>
             </div>
         </div>
         {% endfor %}
     </div>
 {% else %}
-    <p>❗ 没有记录</p>
+    <p style="color: #cc0000; font-size: 16px;">❗ 没有记录</p>
 {% endfor %}
 
-<!-- 删除下注 JS -->
 <script>
 function confirmCancel(id) {
     if (confirm("确认是否废除该下注？")) {
