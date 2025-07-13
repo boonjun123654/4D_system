@@ -1,18 +1,17 @@
 {% extends "layout.html" %}
 {% block content %}
-<h2>财务报表</h2>
 
-<form method="get" action="/report">
-    <label>日期范围：</label>
-    <input type="date" name="start_date" value="{{ start_date }}">
-    <input type="date" name="end_date" value="{{ end_date }}">
-    <button type="submit">查找</button>
+<h2 style="margin-top: 20px;">📊 财务报表</h2>
+
+<form method="get" action="/report" style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
+    <label for="start_date" style="font-weight: bold;">日期范围：</label>
+    <input type="date" id="start_date" name="start_date" value="{{ start_date }}" style="padding: 5px;">
+    <input type="date" id="end_date" name="end_date" value="{{ end_date }}" style="padding: 5px;">
+    <button type="submit" style="padding: 6px 14px; font-size: 14px;">查找</button>
 </form>
 
-<hr>
-
-<table border="1" cellpadding="6" cellspacing="0" style="margin-top: 20px;">
-    <thead style="background-color: #f2f2f2;">
+<table border="1" cellpadding="10" cellspacing="0" style="margin-top: 25px; border-collapse: collapse; width: 100%; text-align: center;">
+    <thead style="background-color: #f4f4f4; font-weight: bold;">
         <tr>
             <th>代理账号</th>
             <th>营业额</th>
@@ -25,15 +24,18 @@
         {% for agent in report_data %}
         <tr>
             <td>{{ agent.username }}</td>
-            <td>{{ "%.2f"|format(agent.sales) }}</td>
-            <td>{{ "%.2f"|format(agent.commission) }}</td>
-            <td>{{ "%.2f"|format(agent.win_amount) }}</td>
-            <td>{{ "%.2f"|format(agent.net) }}</td>
+            <td>RM {{ "%.2f"|format(agent.sales) }}</td>
+            <td>RM {{ "%.2f"|format(agent.commission) }}</td>
+            <td>RM {{ "%.2f"|format(agent.win_amount) }}</td>
+            <td>RM {{ "%.2f"|format(agent.net) }}</td>
         </tr>
         {% endfor %}
         {% if not report_data %}
-        <tr><td colspan="5">无数据</td></tr>
+        <tr>
+            <td colspan="5" style="padding: 15px; color: #666;">无数据</td>
+        </tr>
         {% endif %}
     </tbody>
 </table>
+
 {% endblock %}
