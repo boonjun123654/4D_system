@@ -5,6 +5,7 @@ from utils import calculate_payout
 from models import db, FourDBet, Agent4D
 from collections import defaultdict
 from functools import wraps
+from decimal import Decimal
 import os
 
 app = Flask(__name__)
@@ -136,21 +137,23 @@ def report():
     # Ground B：MPTSHEBWK=22%
     ground_commission = {
         "A": {
-            "M": 0.26, "P": 0.26, "T": 0.26, "S": 0.26, "B": 0.26, "W": 0.26, "K": 0.26,
-            "H": 0.19, "E": 0.19
+            "M": Decimal("0.26"), "P": Decimal("0.26"), "T": Decimal("0.26"), "S": Decimal("0.26"),
+            "B": Decimal("0.26"), "W": Decimal("0.26"), "K": Decimal("0.26"),
+            "H": Decimal("0.19"), "E": Decimal("0.19")
         },
         "B": {
-            "M": 0.22, "P": 0.22, "T": 0.22, "S": 0.22, "H": 0.22, "E": 0.22, "B": 0.22, "W": 0.22, "K": 0.22
+            "M": Decimal("0.22"), "P": Decimal("0.22"), "T": Decimal("0.22"), "S": Decimal("0.22"),
+            "H": Decimal("0.22"), "E": Decimal("0.22"), "B": Decimal("0.22"),
+            "W": Decimal("0.22"), "K": Decimal("0.22")
         }
     }
 
-    # 初始化报表数据
     report_data = defaultdict(lambda: {
         "username": "",
-        "sales": 0.0,
-        "commission": 0.0,
-        "win_amount": 0.0,
-        "net": 0.0
+        "sales": Decimal("0.00"),
+        "commission": Decimal("0.00"),
+        "win_amount": Decimal("0.00"),
+        "net": Decimal("0.00")
     })
 
     for r in records:
@@ -159,20 +162,18 @@ def report():
             continue
 
         group = agent.commission_group or 'A'
-        per_market_total = r.total / (len(r.markets) or 1)
+        per_market_total = r.total / Decimal(len(r.markets) or 1)
 
-        commission_total = 0.0
+        commission_total = Decimal("0.00")
         for m in r.markets:
-            rate = ground_commission.get(group, {}).get(m, 0)
+            rate = ground_commission.get(group, {}).get(m, Decimal("0.00"))
             commission_total += per_market_total * rate
 
         report_data[r.agent_id]["username"] = r.agent_id
         report_data[r.agent_id]["sales"] += r.total
-        report_data[r.agent_id]["commission"] += round(commission_total, 2)
-        report_data[r.agent_id]["win_amount"] += round(r.win_amount, 2)
-        report_data[r.agent_id]["net"] = round(
-            report_data[r.agent_id]["win_amount"] - report_data[r.agent_id]["commission"], 2
-        )
+        report_data[r.agent_id]["commission"] += commission_total
+        report_data[r.agent_id]["win_amount"] += r.win_amount or Decimal("0.00")
+        report_data[r.agent_id]["net"] = report_data[r.agent_id]["win_amount"] - report_data[r.agent_id]["commission"]
 
     return render_template(
         "report.html",
