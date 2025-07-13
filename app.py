@@ -26,14 +26,9 @@ def login_required(view_func):
         return view_func(*args, **kwargs)
     return wrapper
 
-@app.route('/')
+@app.route("/")
 def index():
-    if 'username' not in session:
-        return redirect('/login')
-    if session.get('role') == 'admin':
-        return redirect('/report')
-    else:
-        return redirect('/bet')
+    return render_template("index.html", odds=odds)
 
 @app.route('/bet', methods=['GET', 'POST'])
 @login_required
