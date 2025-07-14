@@ -198,7 +198,12 @@ function updateTotals() {
 }
 
 function handleBet() {
-    // ✅ 修正：根据实际下注行中勾选的日期和市场来决定
+    // ✅ 获取马来西亚当前时间
+    const now = new Date();
+    const malaysiaNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    const cutoff = new Date(malaysiaNow);
+    cutoff.setHours(19, 0, 0, 0); // 晚上 7 点
+
     const selectedDateIndexes = new Set();
     const selectedMarketKeys = new Set();
 
@@ -206,30 +211,34 @@ function handleBet() {
         const number = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!number) continue;
 
-        // 查找该行勾选了哪些日期
         for (let d = 0; d < 7; d++) {
             const checkbox = document.querySelector(`input[name="date${i}_${d}"]`);
             if (checkbox?.checked) selectedDateIndexes.add(d);
         }
 
-        // 查找该行勾选了哪些市场
         for (const m of ['M','P','T','S','B','K','W','H','E']) {
             const checkbox = document.querySelector(`input[name="market${i}_${m}"]`);
             if (checkbox?.checked) selectedMarketKeys.add(m);
         }
     }
 
-    // 转换日期索引为文字
     const dateLabels = Array.from(selectedDateIndexes).map(d => {
         const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
         const [day, month] = rawLabel.split('/').map(n => n.padStart(2, '0'));
-        const formattedLabel = `${day}/${month}`;
-        return formattedLabel || '未选日期';
+        return `${day}/${month}`;
     });
-    const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
 
-    // 市场字母串
+    const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
     const selectedMarkets = Array.from(selectedMarketKeys).join('') || '未选市场';
+
+    // ✅ 检查是否勾选了今天，并且已超过晚上7点
+    const today = malaysiaNow;
+    const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+    if (selectedDates.includes(todayStr) && malaysiaNow >= cutoff) {
+        alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
+        return false;
+    }
 
     let total = 0;
     let betLines = [];
@@ -308,7 +317,7 @@ function handleBet() {
     `;
     document.body.appendChild(modal);
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    return false;  // 阻止原表单提交，等点击“确认”再处理
+    return false;
 }
 
 function copyResult() {
