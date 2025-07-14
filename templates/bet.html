@@ -231,10 +231,8 @@ function handleBet() {
     const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
     const selectedMarkets = Array.from(selectedMarketKeys).join('') || '未选市场';
 
-    // ✅ 检查是否勾选了今天，并且已超过晚上7点
     const today = malaysiaNow;
     const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}`;
-
     if (selectedDates.includes(todayStr) && malaysiaNow >= cutoff) {
         alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
         return false;
@@ -267,9 +265,10 @@ function handleBet() {
         betLines.push(line);
     }
 
-    const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
-    if (!confirm(confirmMsg)) return false;
+    // ✅ 自动提交表单
+    document.querySelector('form').submit();
 
+    // ✅ 弹出详情复制用弹窗
     const finalText = selectedDates.map(date => {
         return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
     }).join('\n\n');
@@ -317,7 +316,13 @@ function handleBet() {
     `;
     document.body.appendChild(modal);
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    return false;
+
+    return false;  // 阻止页面跳转（Render会刷新页面）
+}
+
+function confirmResult() {
+    const modal = document.getElementById("resultModal");
+    if (modal) modal.remove();
 }
 
 function copyResult() {
@@ -325,11 +330,6 @@ function copyResult() {
     navigator.clipboard.writeText(text).then(() => {
         alert("✅ 已复制到剪贴板");
     });
-}
-
-function confirmResult() {
-    document.getElementById("resultModal").remove();
-    document.querySelector('form').submit();  // 手动提交表单
 }
 
 function toggleColumn(type, key) {
