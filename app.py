@@ -61,7 +61,7 @@ def bet():
 
         # ✅ 如果有下注当天的日期，并且已过晚上7点，阻止下注
         if today_str in selected_dates and now.time() >= time(19, 0):
-            flash("⚠️ 晚上 7 点后无法下注当天的号码")
+            flash("⚠️ 下注已经截止！")
             return redirect('/bet')
 
         # 决定 agent_id
