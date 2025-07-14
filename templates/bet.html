@@ -1,5 +1,15 @@
 {% extends "layout.html" %}
 {% block content %}
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px; border-radius: 6px; margin-bottom: 20px;">
+      {% for message in messages %}
+        <div>{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
 <h2>下注页面</h2>
 
 {% if session.get('role') == 'admin' %}
