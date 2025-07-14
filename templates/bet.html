@@ -199,10 +199,10 @@ function updateTotals() {
 
 function handleBet() {
     const malaysiaNow = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
     );
     const cutoff = new Date(malaysiaNow);
-    cutoff.setHours(19, 0, 0, 0); // 晚上 7 点
+    cutoff.setHours(19, 0, 0, 0);
 
     const selectedDateIndexes = new Set();
     const selectedMarketKeys = new Set();
@@ -265,71 +265,70 @@ function handleBet() {
         betLines.push(line);
     }
 
-    // ✅ 自动提交表单
-    document.querySelector('form').submit();
+    const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
+    if (!confirm(confirmMsg)) return false;
 
-    // ✅ 弹出详情复制用弹窗
-    const finalText = selectedDates.map(date => {
-        return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
-    }).join('\n\n');
+    // ✅ 弹出下注详情弹窗（不影响 form 提交）
+    setTimeout(() => {
+        const finalText = selectedDates.map(date => {
+            return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
+        }).join('\n\n');
 
-    const modal = document.createElement('div');
-    modal.innerHTML = `
-        <div id="resultModal" style="
-            position:fixed;
-            top:20px;left: 10px;
-            background:#ffffff;
-            border-radius:12px;
-            box-shadow:0 4px 10px rgba(0,0,0,0.15);
-            padding:16px;
-            width:90%;
-            max-width:340px;
-            z-index:9999;
-            font-size:15px;
-            font-family:system-ui, sans-serif;
-        ">
-            <div id="resultText" style="
-                white-space:pre-wrap;
-                word-break:break-word;
-                margin-bottom:16px;
-            ">${finalText}</div>
-            <div style="display:flex;justify-content:space-between;">
-                <button onclick="copyResult()" style="
-                    flex:1;
-                    margin-right:10px;
-                    padding:8px;
-                    background:#007bff;
-                    color:white;
-                    border:none;
-                    border-radius:6px;
-                ">复制</button>
-                <button onclick="confirmResult()" style="
-                    flex:1;
-                    padding:8px;
-                    background:#28a745;
-                    color:white;
-                    border:none;
-                    border-radius:6px;
-                ">确认</button>
+        const modal = document.createElement('div');
+        modal.innerHTML = `
+            <div id="resultModal" style="
+                position:fixed;
+                top:20px;left: 10px;
+                background:#ffffff;
+                border-radius:12px;
+                box-shadow:0 4px 10px rgba(0,0,0,0.15);
+                padding:16px;
+                width:90%;
+                max-width:340px;
+                z-index:9999;
+                font-size:15px;
+                font-family:system-ui, sans-serif;
+            ">
+                <div id="resultText" style="
+                    white-space:pre-wrap;
+                    word-break:break-word;
+                    margin-bottom:16px;
+                ">${finalText}</div>
+                <div style="display:flex;justify-content:space-between;">
+                    <button onclick="copyResult()" style="
+                        flex:1;
+                        margin-right:10px;
+                        padding:8px;
+                        background:#007bff;
+                        color:white;
+                        border:none;
+                        border-radius:6px;
+                    ">复制</button>
+                    <button onclick="confirmResult()" style="
+                        flex:1;
+                        padding:8px;
+                        background:#28a745;
+                        color:white;
+                        border:none;
+                        border-radius:6px;
+                    ">确认</button>
+                </div>
             </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        `;
+        document.body.appendChild(modal);
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }, 100);  // 延迟一点点，确保表单已成功触发
 
-    return false;  // 阻止页面跳转（Render会刷新页面）
+    return true;  // ✅ 允许真正提交表单
 }
-
 function confirmResult() {
     const modal = document.getElementById("resultModal");
     if (modal) modal.remove();
 }
 
-function copyResult() {
-    const text = document.getElementById("resultText").innerText;
-    navigator.clipboard.writeText(text).then(() => {
-        alert("✅ 已复制到剪贴板");
-    });
+function confirmResult() {
+    const modal = document.getElementById("resultModal");
+    if (modal) modal.remove();
 }
 
 function toggleColumn(type, key) {
