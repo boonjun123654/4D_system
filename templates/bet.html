@@ -198,9 +198,9 @@ function updateTotals() {
 }
 
 function handleBet() {
-    // ✅ 获取马来西亚当前时间
-    const now = new Date();
-    const malaysiaNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    const malaysiaNow = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+    );
     const cutoff = new Date(malaysiaNow);
     cutoff.setHours(19, 0, 0, 0); // 晚上 7 点
 
