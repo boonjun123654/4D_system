@@ -140,18 +140,14 @@ def report():
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
 
-    # 获取下注记录
-    records = FourDBet.query.filter(
-        FourDBet.created_at >= start_date,
-        FourDBet.created_at <= end_date + timedelta(days=1)
-    ).all()
+    # 所有下注记录（不使用 created_at 过滤）
+    all_bets = FourDBet.query.all()
 
     # 所有代理
     agents = Agent4D.query.all()
     agent_map = {a.username: a for a in agents}
 
-    # Ground A：MPTSBWK=26%，HE=19%
-    # Ground B：MPTSHEBWK=22%
+    # Ground A/B 佣金率
     ground_commission = {
         "A": {
             "M": Decimal("0.26"), "P": Decimal("0.26"), "T": Decimal("0.26"), "S": Decimal("0.26"),
@@ -173,7 +169,20 @@ def report():
         "net": Decimal("0.00")
     })
 
-    for r in records:
+    for r in all_bets:
+        # ✅ 过滤目标开奖日是否在范围内
+        match = False
+        for d in r.dates:
+            try:
+                d_date = datetime.strptime(d, "%d/%m").replace(year=start_date.year)
+                if start_date <= d_date <= end_date:
+                    match = True
+                    break
+            except:
+                continue
+        if not match:
+            continue
+
         agent = agent_map.get(r.agent_id)
         if not agent:
             continue
