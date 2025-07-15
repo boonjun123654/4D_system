@@ -274,6 +274,9 @@ function handleBet() {
             return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
         }).join('\n\n');
 
+        localStorage.setItem("bet_popup", finalText);
+        return true;
+
         const modal = document.createElement('div');
         modal.innerHTML = `
             <div id="resultModal" style="
@@ -359,6 +362,53 @@ function getCombinationCount(number) {
         default: return 0;
     }
 }
+
+function showBetPopup(text) {
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div id="resultModal" style="
+            position:fixed;
+            top:20px;left: 10px;
+            background:#ffffff;
+            border-radius:12px;
+            box-shadow:0 4px 10px rgba(0,0,0,0.15);
+            padding:16px;
+            width:90%;
+            max-width:340px;
+            z-index:9999;
+            font-size:15px;
+            font-family:system-ui, sans-serif;
+        ">
+            <div id="resultText" style="
+                white-space:pre-wrap;
+                word-break:break-word;
+                margin-bottom:16px;
+            ">${text}</div>
+            <div style="display:flex;justify-content:space-between;">
+                <button onclick="copyResult()" style="
+                    flex:1;
+                    margin-right:10px;
+                    padding:8px;
+                    background:#007bff;
+                    color:white;
+                    border:none;
+                    border-radius:6px;
+                ">复制</button>
+                <button onclick="confirmResult()" style="
+                    flex:1;
+                    padding:8px;
+                    background:#28a745;
+                    color:white;
+                    border:none;
+                    border-radius:6px;
+                ">确认</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
 
@@ -380,6 +430,14 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
+
+        // ✅ 页面刷新后检查是否要显示下注详情弹窗
+    const savedPopup = localStorage.getItem("bet_popup");
+    if (savedPopup) {
+        showBetPopup(savedPopup);
+        localStorage.removeItem("bet_popup");
+    }
+
 
     // 金额或号码变动时自动计算
     document.querySelectorAll('input[type="text"], select').forEach(input => {
