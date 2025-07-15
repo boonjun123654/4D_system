@@ -391,5 +391,30 @@ def admin_draw_input():
 
     return render_template('admin_draw_input.html')
 
+@app.route('/delete_bet/<int:bet_id>', methods=['POST'])
+@login_required
+def delete_bet(bet_id):
+    bet = FourDBet.query.get_or_404(bet_id)
+
+    # ✅ 检查是否是本人或管理员
+    if session.get('role') != 'admin' and bet.agent_id != session.get('username'):
+        flash("❌ 无权限删除该下注记录")
+        return redirect('/history')
+
+    # ✅ 锁注规则：若包含今天日期，并且已过19:00，禁止删除
+    malaysia = timezone('Asia/Kuala_Lumpur')
+    now = datetime.now(malaysia)
+    today_str = now.strftime('%d/%m')
+    is_locked = today_str in bet.dates and now.time() >= time(19, 0)
+
+    if is_locked:
+        flash("⚠️ 当日 19:00 后不能删除今日下注记录")
+        return redirect('/history')
+
+    db.session.delete(bet)
+    db.session.commit()
+    flash("✅ 已删除下注记录")
+    return redirect('/history')
+
 if __name__ == '__main__':
     app.run(debug=True)
