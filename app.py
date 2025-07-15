@@ -213,10 +213,7 @@ def history():
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
 
-    query = FourDBet.query.filter(
-        FourDBet.created_at >= start_date,
-        FourDBet.created_at <= end_date + timedelta(days=1)
-    )
+    query = FourDBet.query
 
     # 筛选代理
     if session.get('role') == 'agent':
@@ -224,12 +221,21 @@ def history():
     elif selected_agent:
         query = query.filter_by(agent_id=selected_agent)
 
-    records = query.order_by(FourDBet.created_at.desc()).all()
+    all_records = query.order_by(FourDBet.created_at.desc()).all()
 
     grouped = defaultdict(list)
-    for r in records:
-        date_key = r.created_at.strftime("%Y-%m-%d")
-        grouped[date_key].append(r)
+    for r in all_records:
+        for d in r.dates:
+            try:
+                d_date = datetime.strptime(d, "%d/%m")  # 解析成 datetime 对象（只含日月）
+                d_date = d_date.replace(year=start_date.year)  # 假设是当前年份
+                if start_date <= d_date <= end_date:
+                    grouped[d].append(r)
+            except:
+                continue  # 防止格式不正确时报错
+
+    # ✅ 日期从新到旧排序
+    grouped = dict(sorted(grouped.items(), key=lambda x: datetime.strptime(x[0], "%d/%m"), reverse=True))
 
     agents = Agent4D.query.all() if session.get('role') == 'admin' else []
 
