@@ -329,9 +329,16 @@ function confirmResult() {
     if (modal) modal.remove();
 }
 
-function confirmResult() {
-    const modal = document.getElementById("resultModal");
-    if (modal) modal.remove();
+function copyResult() {
+    const text = document.getElementById("resultText")?.innerText || "";
+    if (!text) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+        alert("✅ 已复制下注信息");
+    }).catch(err => {
+        alert("❌ 复制失败，请手动选取文字");
+        console.error("Clipboard error:", err);
+    });
 }
 
 function toggleColumn(type, key) {
