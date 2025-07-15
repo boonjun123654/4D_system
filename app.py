@@ -223,7 +223,6 @@ def history():
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
 
     query = FourDBet.query
-    query = query.filter(FourDBet.is_cancelled != True)
 
     # 筛选代理
     if session.get('role') == 'agent':
@@ -391,21 +390,6 @@ def admin_draw_input():
         return redirect('/admin/draw_input')
 
     return render_template('admin_draw_input.html')
-
-@app.route("/cancel_bet/<int:bet_id>", methods=["POST"])
-@login_required
-def cancel_bet(bet_id):
-    bet = FourDBet.query.get(bet_id)
-    if not bet:
-        return "下注不存在", 404
-
-    # 管理员或本代理本人才能废除
-    if session.get('role') == 'admin' or session.get('username') == bet.agent_id:
-        bet.is_cancelled = True
-        db.session.commit()
-        return '', 200
-    else:
-        return "无权限", 403
 
 if __name__ == '__main__':
     app.run(debug=True)
