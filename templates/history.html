@@ -69,9 +69,23 @@
                 <a href="/bet?ref={{ bet.id }}" style="flex: 1;">
                     <button type="button" style="width: 100%; padding: 6px; background-color:#007bff; color:white; border:none; border-radius:4px;">重新下注</button>
                 </a>
-                <button type="button" onclick="confirmCancel('{{ bet.id }}')" style="flex: 1; padding: 6px; background-color:#dc3545; color:white; border:none; border-radius:4px;">
-                    废除
-                </button>
+
+                {% set locked = false %}
+                {% for d in bet.dates %}
+                    {% if d == now_str and now_hour >= 19 %}
+                        {% set locked = true %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if locked %}
+                    <button type="button" disabled style="flex: 1; padding: 6px; background-color:#ccc; color:#666; border:none; border-radius:4px; cursor: not-allowed;">
+                        已锁注
+                    </button>
+                {% else %}
+                    <form method="POST" action="/delete_bet/{{ bet.id }}" onsubmit="return confirm('确认是否删除该下注？');" style="flex: 1;">
+                        <button type="submit" style="width: 100%; padding: 6px; background-color:#dc3545; color:white; border:none; border-radius:4px;">删除</button>
+                    </form>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -79,22 +93,3 @@
 {% else %}
     <p style="color: #cc0000; font-size: 16px;">❗ 没有记录</p>
 {% endfor %}
-
-<script>
-function confirmCancel(id) {
-    if (confirm("确认是否废除该下注？")) {
-        fetch(`/cancel_bet/${id}`, {
-            method: 'POST',
-        }).then(res => {
-            if (res.ok) {
-                alert("✅ 已废除");
-                window.location.reload();
-            } else {
-                alert("❌ 废除失败");
-            }
-        });
-    }
-}
-</script>
-
-{% endblock %}
