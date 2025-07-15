@@ -255,8 +255,9 @@ def history():
         start_date=start_date.strftime("%Y-%m-%d"),
         end_date=end_date.strftime("%Y-%m-%d"),
         agents=agents,
-        now_str=now.strftime("%d/%m"),   # 👈 当前马来时间日期
-        now_hour=now.hour  
+        now_str=now.strftime("%d/%m"),   # 👈 保留也行
+        now_hour=now.hour,
+        now_date=now.strftime("%d/%m")   # 👈 新增
     )
 
 @app.route('/admin/agents', methods=['GET', 'POST'])
