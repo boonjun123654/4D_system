@@ -215,6 +215,7 @@ def report():
 @app.route('/history')
 @login_required
 def history():
+    now = datetime.now(timezone('Asia/Kuala_Lumpur'))
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     selected_agent = request.args.get('agent_id')
@@ -253,7 +254,9 @@ def history():
         grouped=grouped,
         start_date=start_date.strftime("%Y-%m-%d"),
         end_date=end_date.strftime("%Y-%m-%d"),
-        agents=agents
+        agents=agents,
+        now_str=now.strftime("%d/%m"),   # 👈 当前马来时间日期
+        now_hour=now.hour  
     )
 
 @app.route('/admin/agents', methods=['GET', 'POST'])
