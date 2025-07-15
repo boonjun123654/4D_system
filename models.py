@@ -17,6 +17,7 @@ class FourDBet(db.Model):
     dates = db.Column(db.ARRAY(db.Text), nullable=False)
     markets = db.Column(db.ARRAY(db.Text), nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
+    is_cancelled = db.Column(db.Boolean, default=False)
 
 class Agent4D(db.Model):
     __tablename__ = 'agent_4d'
