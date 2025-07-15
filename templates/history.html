@@ -72,7 +72,9 @@
 
                 {% set locked = false %}
                 {% for d in bet.dates %}
-                    {% if d == now_str and now_hour >= 19 %}
+                    {% if d == now_date and now_hour >= 19 %}
+                        {% set locked = true %}
+                    {% elif d < now_date %}
                         {% set locked = true %}
                     {% endif %}
                 {% endfor %}
