@@ -277,10 +277,7 @@ def history():
         grouped=grouped,
         start_date=start_date.strftime("%Y-%m-%d"),
         end_date=end_date.strftime("%Y-%m-%d"),
-        agents=agents,
-        now_str=now.strftime("%d/%m"),   # 👈 保留也行
-        now_hour=now.hour,
-        now_date=now.strftime("%d/%m")   # 👈 新增
+        agents=agents
     )
 
 @app.route('/admin/agents', methods=['GET', 'POST'])
