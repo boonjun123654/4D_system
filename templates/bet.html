@@ -462,5 +462,114 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateTotals();
 });
+
+// ✅ 限制不合法日期和市场选择逻辑
+function applyDateMarketRules() {
+    const malaysiaNow = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+    );
+    const baseDate = new Date(malaysiaNow);
+    baseDate.setHours(0, 0, 0, 0);
+
+    const weekdays = [];
+    for (let d = 0; d < 7; d++) {
+        const day = new Date(baseDate);
+        day.setDate(day.getDate() + d);
+        weekdays.push(day.getDay()); // 0=Sunday, ..., 6=Saturday
+    }
+
+    const restrictedMarkets = ['M','P','T','S','B','K','W'];
+    let selectedRestrictedMarket = false;
+    for (const m of restrictedMarkets) {
+        if (document.getElementById(`select_market_${m}`)?.checked) {
+            selectedRestrictedMarket = true;
+            break;
+        }
+    }
+
+    let selectedInvalidDate = false;
+    for (let d = 0; d < 7; d++) {
+        const wd = weekdays[d];
+        const checkbox = document.getElementById(`select_date_${d}`);
+        if (checkbox?.checked && ![0, 3, 6].includes(wd)) {
+            selectedInvalidDate = true;
+            break;
+        }
+    }
+
+    for (const m of restrictedMarkets) {
+        const marketCheckbox = document.getElementById(`select_market_${m}`);
+        if (marketCheckbox) {
+            marketCheckbox.disabled = selectedInvalidDate;
+        }
+    }
+
+    for (let d = 0; d < 7; d++) {
+        const wd = weekdays[d];
+        const dateCheckbox = document.getElementById(`select_date_${d}`);
+        if (dateCheckbox) {
+            dateCheckbox.disabled = selectedRestrictedMarket && ![0, 3, 6].includes(wd);
+        }
+    }
+}
+
+// ✅ 页面加载 + 任意 checkbox 变动时触发限制检查
+function setupBetListeners() {
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            updateTotals();
+            applyDateMarketRules();
+        });
+    });
+    applyDateMarketRules();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    // ... 原有内容保留
+    // 替换如下监听逻辑：
+
+    const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
+    inputs.forEach((input, idx) => {
+        input.addEventListener("keydown", function (e) {
+            if (e.key === " ") {
+                e.preventDefault();
+                if (idx + 1 < inputs.length) inputs[idx + 1].focus();
+            }
+            if (e.key === "Enter" && this.name.startsWith("number")) {
+                e.preventDefault();
+                const match = this.name.match(/^number(\d+)$/);
+                if (match) {
+                    const nextIndex = parseInt(match[1]) + 1;
+                    const nextInput = document.querySelector(`input[name="number${nextIndex}"]`);
+                    if (nextInput) nextInput.focus();
+                }
+            }
+        });
+    });
+
+    // ✅ 页面刷新后检查是否要显示下注详情弹窗
+    const savedPopup = localStorage.getItem("bet_popup");
+    if (savedPopup) {
+        showBetPopup(savedPopup);
+        localStorage.removeItem("bet_popup");
+    }
+
+    // ✅ 金额或号码变动时自动计算
+    document.querySelectorAll('input[type="text"], select').forEach(input => {
+        input.addEventListener('input', updateTotals);
+    });
+
+    // ✅ 启用限制逻辑监听器
+    setupBetListeners();
+
+    document.querySelector('button[type="reset"]').addEventListener('click', function () {
+        setTimeout(() => {
+            updateTotals();
+            applyDateMarketRules();
+        }, 100);
+    });
+
+    updateTotals();
+});
 </script>
 {% endblock %}
