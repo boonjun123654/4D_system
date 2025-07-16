@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, flash, session
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from odds_config import odds
 from datetime import datetime, timedelta,time
 from utils import calculate_payout
@@ -33,15 +35,6 @@ def lock_today_bets():
 scheduler.add_job(lock_today_bets,
  CronTrigger(hour=19, minute=0))
 scheduler.start()
-
-# 登录保护装饰器
-def login_required(view_func):
-    @wraps(view_func)
-    def wrapper(*args, **kwargs):
-        if 'username' not in session:
-            return redirect('/login')
-        return view_func(*args, **kwargs)
-    return wrapper
 
 # 登录保护装饰器
 def login_required(view_func):
