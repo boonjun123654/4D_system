@@ -17,7 +17,7 @@ class FourDBet(db.Model):
     dates = db.Column(db.ARRAY(db.Text), nullable=False)
     markets = db.Column(db.ARRAY(db.Text), nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now
-    status = db.Column(db.String(10), default='active'
+    status = db.Column(db.String(10), default='active')  # 'active' / 'locked'
 
 class Agent4D(db.Model):
     __tablename__ = 'agent_4d'
