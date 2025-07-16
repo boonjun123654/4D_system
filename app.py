@@ -21,6 +21,28 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+def lock_today_bets():
+    now = datetime.now(timezone('Asia/Kuala_Lumpur'))
+    today_str = now.strftime("%d/%m")
+    bets = FourDBet.query.filter(FourDBet.dates.contains([today_str]), FourDBet.status == 'active').all()
+    for bet in bets:
+        bet.status = 'locked'
+    db.session.commit()
+    print(f"[{now}] ✅ 锁注完成 {len(bets)} 条")
+
+scheduler.add_job(lock_today_bets,
+ CronTrigger(hour=19, minute=0))
+scheduler.start()
+
+# 登录保护装饰器
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if 'username' not in session:
+            return redirect('/login')
+        return view_func(*args, **kwargs)
+    return wrapper
+
 # 登录保护装饰器
 def login_required(view_func):
     @wraps(view_func)
