@@ -264,6 +264,42 @@ function handleBet() {
         total += row;
         betLines.push(line);
     }
+    // ✅ 检查是否有同一号码+市场+日期 总 win_amount 超过 RM10000
+    const MAX_WIN = 10000;
+    const betMap = {};  // 结构：{ '6556_M_17/07': total_win }
+
+    for (let i = 1; i <= 12; i++) {
+        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!num) continue;
+
+        const win = parseFloat(document.querySelector(`input[name="win_amount${i}"]`)?.value) || 0;
+
+        const selectedDates = [];
+        for (let d = 0; d < 7; d++) {
+            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (cb?.checked) {
+                const label = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
+                selectedDates.push(label);  // 如 17/07
+            }
+        }
+
+        const selectedMarkets = [];
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            const cb = document.querySelector(`input[name="market${i}_${m}"]`);
+            if (cb?.checked) selectedMarkets.push(m);
+        }
+
+        for (const d of selectedDates) {
+            for (const m of selectedMarkets) {
+                const key = `${num}_${m}_${d}`;
+                betMap[key] = (betMap[key] || 0) + win;
+                if (betMap[key] > MAX_WIN) {
+                    alert(`⚠️ ${num} 在市场 ${m}，日期 ${d} 的总中奖金额已超过 RM${MAX_WIN}，请修改下注`);
+                    return false;
+                }
+            }
+        }
+    }
 
     const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
     if (!confirm(confirmMsg)) return false;
