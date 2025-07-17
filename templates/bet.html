@@ -555,13 +555,13 @@ function applyDateMarketRules() {
 
 // ✅ 页面加载 + 任意 checkbox 变动时触发限制检查
 function setupBetListeners() {
+    // ✅ 所有 checkbox 都监听
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.addEventListener('change', () => {
+        cb.addEventListener('change', function () {
             updateTotals();
-            applyDateMarketRules();
+            applyDateMarketRules();  // 不管是下注行或表头，都执行限制逻辑
         });
     });
-    applyDateMarketRules();
 }
 
 document.addEventListener("DOMContentLoaded", function () {
