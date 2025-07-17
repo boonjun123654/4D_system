@@ -479,14 +479,8 @@ function applyDateMarketRules() {
     }
 
     const restrictedMarkets = ['M','P','T','S','B','K','W'];
-    let selectedRestrictedMarket = false;
-    for (const m of restrictedMarkets) {
-        if (document.getElementById(`select_market_${m}`)?.checked) {
-            selectedRestrictedMarket = true;
-            break;
-        }
-    }
 
+    // 是否选中了非法日期（非 0/3/6）
     let selectedInvalidDate = false;
     for (let d = 0; d < 7; d++) {
         const wd = weekdays[d];
@@ -497,21 +491,52 @@ function applyDateMarketRules() {
         }
     }
 
+    // 是否选中了限制市场（MPTSBKW）
+    let selectedRestrictedMarket = false;
+    for (const m of restrictedMarkets) {
+        const checkbox = document.getElementById(`select_market_${m}`);
+        if (checkbox?.checked) {
+            selectedRestrictedMarket = true;
+            break;
+        }
+    }
+
+    // 🔁 遍历所有日期 checkbox（含每一行）
+    for (let d = 0; d < 7; d++) {
+        const wd = weekdays[d];
+        const isValidDate = [0, 3, 6].includes(wd);
+        const globalCheckbox = document.getElementById(`select_date_${d}`);
+
+        const shouldDisable = selectedRestrictedMarket && !isValidDate;
+        if (globalCheckbox) {
+            globalCheckbox.disabled = shouldDisable;
+            if (shouldDisable) globalCheckbox.checked = false;
+        }
+
+        // 所有下注行格子
+        for (let i = 1; i <= 12; i++) {
+            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (cb) {
+                cb.disabled = shouldDisable;
+                if (shouldDisable) cb.checked = false;
+            }
+        }
+    }
+
+    // 🔁 遍历所有市场 checkbox（含每一行）
     for (const m of restrictedMarkets) {
         const marketCheckbox = document.getElementById(`select_market_${m}`);
         if (marketCheckbox) {
             marketCheckbox.disabled = selectedInvalidDate;
-            if (selectedInvalidDate) marketCheckbox.checked = false;  // ✅ 强制取消勾选
+            if (selectedInvalidDate) marketCheckbox.checked = false;
         }
-    }
 
-    for (let d = 0; d < 7; d++) {
-        const wd = weekdays[d];
-        const dateCheckbox = document.getElementById(`select_date_${d}`);
-        if (dateCheckbox) {
-            const shouldDisable = selectedRestrictedMarket && ![0, 3, 6].includes(wd);
-            dateCheckbox.disabled = shouldDisable;
-            if (shouldDisable) dateCheckbox.checked = false;  // ✅ 强制取消勾选
+        for (let i = 1; i <= 12; i++) {
+            const cb = document.querySelector(`input[name="market${i}_${m}"]`);
+            if (cb) {
+                cb.disabled = selectedInvalidDate;
+                if (selectedInvalidDate) cb.checked = false;
+            }
         }
     }
 }
