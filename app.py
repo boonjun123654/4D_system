@@ -117,6 +117,24 @@ def bet():
             if not dates or not markets:
                 continue
 
+        # 统一号码格式（Box/IBox 排序处理）
+        normalized_number = ''.join(sorted(number)) if bet_type in ['Box', 'IBox'] else number
+
+        # 计算当前这组号码的中奖金额（每个市场和日期分别计算）
+        for market in markets:
+            for date_str in dates:
+                # 查询历史相同号码（Box/IBox 要排序）、市场、日期的 win_amount 总和
+                existing_total = db.session.query(func.sum(FourDBet.win_amount)).filter(
+                    FourDBet.number == normalized_number,
+                    FourDBet.type.in_(['Box', 'IBox']) if bet_type in ['Box', 'IBox'] else FourDBet.type == bet_type,
+                    FourDBet.markets.contains([market]),
+                    FourDBet.dates.contains([date_str])
+                ).scalar() or 0
+
+                if existing_total + win_amount > 10000:
+                    flash(f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消")
+                    return redirect('/bet')
+
             def get_comb_count(n):
                 digits = list(n)
                 counts = {d: digits.count(d) for d in set(digits)}
@@ -133,7 +151,7 @@ def bet():
 
             bet = FourDBet(
                 agent_id=agent_id,
-                number=number,
+                number=normalized_number,
                 type=bet_type,
                 b=B, s=S, a=A, c=C,
                 total=total,
