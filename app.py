@@ -4,6 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 from odds_config import odds
 from datetime import datetime, timedelta,time
 from utils import calculate_payout
+from sqlalchemy import func
 from models import db, FourDBet, Agent4D,DrawResult4D  
 from collections import defaultdict
 from functools import wraps
