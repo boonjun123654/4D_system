@@ -587,6 +587,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    setupBetListeners();
+
     // ✅ 页面刷新后检查是否要显示下注详情弹窗
     const savedPopup = localStorage.getItem("bet_popup");
     if (savedPopup) {
