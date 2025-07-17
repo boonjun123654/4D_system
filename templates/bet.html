@@ -416,36 +416,6 @@ function showBetPopup(text) {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-    const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
-
-    // 空格键跳格，Enter跳到下一行
-    inputs.forEach((input, idx) => {
-        input.addEventListener("keydown", function (e) {
-            if (e.key === " ") {
-                e.preventDefault();
-                if (idx + 1 < inputs.length) inputs[idx + 1].focus();
-            }
-            if (e.key === "Enter" && this.name.startsWith("number")) {
-                e.preventDefault();
-                const match = this.name.match(/^number(\d+)$/);
-                if (match) {
-                    const nextIndex = parseInt(match[1]) + 1;
-                    const nextInput = document.querySelector(`input[name="number${nextIndex}"]`);
-                    if (nextInput) nextInput.focus();
-                }
-            }
-        });
-    });
-
-        // ✅ 页面刷新后检查是否要显示下注详情弹窗
-    const savedPopup = localStorage.getItem("bet_popup");
-    if (savedPopup) {
-        showBetPopup(savedPopup);
-        localStorage.removeItem("bet_popup");
-    }
-
-
     // 金额或号码变动时自动计算
     document.querySelectorAll('input[type="text"], select').forEach(input => {
         input.addEventListener('input', updateTotals);
@@ -565,9 +535,7 @@ function setupBetListeners() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    // ... 原有内容保留
-    // 替换如下监听逻辑：
-
+    // 金额输入跳格、Enter 跳行
     const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
     inputs.forEach((input, idx) => {
         input.addEventListener("keydown", function (e) {
@@ -587,23 +555,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    // 所有 checkbox 设置监听器
     setupBetListeners();
 
-    // ✅ 页面刷新后检查是否要显示下注详情弹窗
+    // 刷新后显示下注弹窗
     const savedPopup = localStorage.getItem("bet_popup");
     if (savedPopup) {
         showBetPopup(savedPopup);
         localStorage.removeItem("bet_popup");
     }
 
-    // ✅ 金额或号码变动时自动计算
+    // 金额、号码变动时自动更新
     document.querySelectorAll('input[type="text"], select').forEach(input => {
         input.addEventListener('input', updateTotals);
     });
 
-    // ✅ 启用限制逻辑监听器
-    setupBetListeners();
-
+    // Reset 后刷新限制逻辑
     document.querySelector('button[type="reset"]').addEventListener('click', function () {
         setTimeout(() => {
             updateTotals();
@@ -611,7 +578,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 100);
     });
 
+    // 初始化计算
     updateTotals();
+    applyDateMarketRules();  // ✅ 确保首次加载时禁用非法格子
 });
 </script>
 {% endblock %}
