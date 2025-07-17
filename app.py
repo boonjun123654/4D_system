@@ -137,8 +137,8 @@ def bet():
                     existing_total = db.session.query(func.sum(FourDBet.win_amount)).filter(
                         FourDBet.number == normalized_number,
                         FourDBet.type.in_(['Box', 'IBox']) if bet_type in ['Box', 'IBox'] else FourDBet.type == bet_type,
-                        market in FourDBet.markets,
-                        date_str in FourDBet.dates
+                        market == any_(FourDBet.markets),
+                        date_str == any_(FourDBet.dates)
                     ).scalar() or 0
 
                     if existing_total + win_amount > 10000:
