@@ -65,7 +65,6 @@ def bet():
         agents = []
 
     if request.method == 'POST':
-        # ✅ 添加下注时间限制检查
         now = datetime.now(timezone('Asia/Kuala_Lumpur'))
         today_str = now.strftime('%d/%m')
         selected_dates = set()
@@ -76,12 +75,10 @@ def bet():
                     date_str = (date_today + timedelta(days=d)).strftime('%d/%m')
                     selected_dates.add(date_str)
 
-        # ✅ 如果有下注当天的日期，并且已过晚上7点，阻止下注
         if today_str in selected_dates and now.time() >= time(19, 0):
             flash("⚠️ 下注已经截止！")
             return redirect('/bet')
 
-        # 决定 agent_id
         if session.get('role') == 'admin':
             selected_agent_id = request.form.get('agent_id')
             agent = Agent4D.query.get(int(selected_agent_id)) if selected_agent_id else None
@@ -89,6 +86,21 @@ def bet():
             agent = Agent4D.query.filter_by(username=session['username']).first()
 
         agent_id = agent.username if agent else None
+
+        def get_box_permutations(n):
+            from itertools import permutations
+            return list(set([''.join(p) for p in permutations(n)]))
+
+        def get_comb_count(n):
+            digits = list(n)
+            counts = {d: digits.count(d) for d in set(digits)}
+            pattern = sorted(counts.values(), reverse=True)
+            if pattern == [4]: return 1
+            if pattern == [3, 1]: return 4
+            if pattern == [2, 2]: return 6
+            if pattern == [2, 1, 1]: return 12
+            if pattern == [1, 1, 1, 1]: return 24
+            return 1
 
         for i in range(1, 13):
             number = request.form.get(f'number{i}', '').strip()
@@ -116,39 +128,22 @@ def bet():
 
             if not dates or not markets:
                 continue
+
             box_permutations = get_box_permutations(number) if bet_type == 'Box' else [number]
             normalized_number = ''.join(sorted(number)) if bet_type in ['Box', 'IBox'] else number
 
-# 判断 Box 时要生成所有排列组合
-def get_box_permutations(n):
-    from itertools import permutations
-    return list(set([''.join(p) for p in permutations(n)]))
+            for market in markets:
+                for date_str in dates:
+                    existing_total = db.session.query(func.sum(FourDBet.win_amount)).filter(
+                        FourDBet.number == normalized_number,
+                        FourDBet.type.in_(['Box', 'IBox']) if bet_type in ['Box', 'IBox'] else FourDBet.type == bet_type,
+                        FourDBet.markets.contains([market]),
+                        FourDBet.dates.contains([date_str])
+                    ).scalar() or 0
 
-        # 计算当前这组号码的中奖金额（每个市场和日期分别计算）
-        for market in markets:
-            for date_str in dates:
-                # 查询历史相同号码（Box/IBox 要排序）、市场、日期的 win_amount 总和
-                existing_total = db.session.query(func.sum(FourDBet.win_amount)).filter(
-                    FourDBet.number == normalized_number,
-                    FourDBet.type.in_(['Box', 'IBox']) if bet_type in ['Box', 'IBox'] else FourDBet.type == bet_type,
-                    FourDBet.markets.contains([market]),
-                    FourDBet.dates.contains([date_str])
-                ).scalar() or 0
-
-                if existing_total + win_amount > 10000:
-                    flash(f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消")
-                    return redirect('/bet')
-
-            def get_comb_count(n):
-                digits = list(n)
-                counts = {d: digits.count(d) for d in set(digits)}
-                pattern = sorted(counts.values(), reverse=True)
-                if pattern == [4]: return 1
-                if pattern == [3, 1]: return 4
-                if pattern == [2, 2]: return 6
-                if pattern == [2, 1, 1]: return 12
-                if pattern == [1, 1, 1, 1]: return 24
-                return 1
+                    if existing_total + win_amount > 10000:
+                        flash(f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消")
+                        return redirect('/bet')
 
             factor = get_comb_count(number) if bet_type == 'Box' else 1
             total = (B + S + A + C) * factor * len(dates) * len(markets)
