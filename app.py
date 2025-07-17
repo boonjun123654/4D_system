@@ -4,7 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 from odds_config import odds
 from datetime import datetime, timedelta,time
 from utils import calculate_payout
-from sqlalchemy import func
+from sqlalchemy import func,any_
 from models import db, FourDBet, Agent4D,DrawResult4D  
 from collections import defaultdict
 from functools import wraps
@@ -116,6 +116,12 @@ def bet():
 
             if not dates or not markets:
                 continue
+# 判断 Box 时要生成所有排列组合
+def get_box_permutations(n):
+    from itertools import permutations
+    return list(set([''.join(p) for p in permutations(n)]))
+
+box_permutations = get_box_permutations(number) if bet_type == 'Box' else [number]
 
         # 统一号码格式（Box/IBox 排序处理）
         normalized_number = ''.join(sorted(number)) if bet_type in ['Box', 'IBox'] else number
