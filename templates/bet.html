@@ -451,9 +451,21 @@ document.addEventListener("DOMContentLoaded", function () {
         input.addEventListener('input', updateTotals);
     });
 
-    // 勾选日期/市场也要触发计算
+    // ✅ 包括所有勾选框（含下注行）
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.addEventListener('change', updateTotals);
+        cb.addEventListener('change', function () {
+            updateTotals();
+
+            // ✅ 只要变动了日期或市场的 checkbox，就重新应用规则
+            if (
+                this.name.startsWith('date') ||
+                this.name.startsWith('market') ||
+                this.id.startsWith('select_date_') ||
+                this.id.startsWith('select_market_')
+            ) {
+                applyDateMarketRules();
+            }
+        });
     });
 
     document.querySelector('button[type="reset"]').addEventListener('click', function () {
