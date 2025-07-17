@@ -501,6 +501,7 @@ function applyDateMarketRules() {
         const marketCheckbox = document.getElementById(`select_market_${m}`);
         if (marketCheckbox) {
             marketCheckbox.disabled = selectedInvalidDate;
+            if (selectedInvalidDate) marketCheckbox.checked = false;  // ✅ 强制取消勾选
         }
     }
 
@@ -508,7 +509,9 @@ function applyDateMarketRules() {
         const wd = weekdays[d];
         const dateCheckbox = document.getElementById(`select_date_${d}`);
         if (dateCheckbox) {
-            dateCheckbox.disabled = selectedRestrictedMarket && ![0, 3, 6].includes(wd);
+            const shouldDisable = selectedRestrictedMarket && ![0, 3, 6].includes(wd);
+            dateCheckbox.disabled = shouldDisable;
+            if (shouldDisable) dateCheckbox.checked = false;  // ✅ 强制取消勾选
         }
     }
 }
