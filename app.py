@@ -147,8 +147,9 @@ def bet():
                         existing_total = sum(float(eb.win_amount) for eb in existing_bets)
 
                         if existing_total + win_amount > 10000:
-                            flash(f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消")
-                            return redirect('/bet')
+                            return jsonify({
+                                'error': f"{date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000"
+                            }), 400
 
             factor = get_comb_count(number) if bet_type == 'Box' else 1
             total = (B + S + A + C) * factor * len(dates) * len(markets)
