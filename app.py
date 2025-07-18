@@ -131,17 +131,31 @@ def bet():
 
             box_permutations = get_box_permutations(number) if bet_type == 'Box' else [number]
             normalized_number = ''.join(sorted(number)) if bet_type in ['Box', 'IBox'] else number
-
+            
             for market in markets:
                 for date_str in dates:
-                    existing_total = db.session.query(func.sum(FourDBet.win_amount)).filter(
-                        FourDBet.number == normalized_number,
-                        FourDBet.type.in_(['Box', 'IBox']) if bet_type in ['Box', 'IBox'] else FourDBet.type == bet_type,
-                        market == any_(FourDBet.markets),
-                        date_str == any_(FourDBet.dates)
-                    ).scalar() or 0
+                    existing_total = 0
 
-                    if existing_total + Decimal(str(win_amount)) > Decimal('10000'):
+                    if bet_type in ['Box', 'IBox']:
+                        all_perms = get_box_permutations(number)  # 全部排列
+                        existing_bets = db.session.query(FourDBet).filter(
+                            FourDBet.number.in_(all_perms),
+                            FourDBet.type.in_(['Box', 'IBox']),
+                            FourDBet.markets.any(market),
+                            FourDBet.dates.any(date_str)
+                        ).all()
+                    else:
+                        existing_bets = db.session.query(FourDBet).filter(
+                            FourDBet.number == number,
+                            FourDBet.type == bet_type,
+                            FourDBet.markets.any(market),
+                            FourDBet.dates.any(date_str)
+                        ).all()
+
+                    for eb in existing_bets:
+                        existing_total += float(eb.win_amount)
+
+                    if existing_total + win_amount > 10000:
                         flash(f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消")
                         return redirect('/bet')
 
