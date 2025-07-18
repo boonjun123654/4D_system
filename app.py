@@ -142,7 +142,6 @@ def bet():
                         all_perms = get_box_permutations(number)  # 全部排列
                         existing_bets = db.session.query(FourDBet).filter(
                             FourDBet.number.in_(all_perms),
-                            FourDBet.type.in_(['Box', 'IBox']),
                             FourDBet.markets.any(market),
                             FourDBet.dates.any(date_str)
                         ).all()
