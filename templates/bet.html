@@ -13,7 +13,7 @@
 <h2>下注页面</h2>
 
 {% if session.get('role') == 'admin' %}
-<form method="post" id="betForm" onsubmit="return handleBet(event);">
+<form method="post" onsubmit="return handleBet();">
     <div style="margin: 20px 0; display: flex; align-items: center; gap: 10px;">
         <label for="agent_id" style="font-weight: bold; font-size: 16px;">选择代理用户：</label>
         <select id="agent_id" name="agent_id" required
