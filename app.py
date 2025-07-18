@@ -130,8 +130,10 @@ def bet():
                 continue
 
             box_permutations = get_box_permutations(number) if bet_type == 'Box' else [number]
+            # 检查用排序（用于过滤器匹配），但保存原始号码
             normalized_number = ''.join(sorted(number)) if bet_type in ['Box', 'IBox'] else number
-            
+            save_number = number  # 不管什么类型都保存原始号码
+
             for market in markets:
                 for date_str in dates:
                     existing_total = 0
@@ -164,7 +166,7 @@ def bet():
 
             bet = FourDBet(
                 agent_id=agent_id,
-                number=normalized_number,
+                number=save_number,
                 type=bet_type,
                 b=B, s=S, a=A, c=C,
                 total=total,
