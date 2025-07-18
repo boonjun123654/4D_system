@@ -141,7 +141,7 @@ def bet():
                         date_str == any_(FourDBet.dates)
                     ).scalar() or 0
 
-                    if existing_total + win_amount > 10000:
+                    if existing_total + Decimal(str(win_amount)) > Decimal('10000'):
                         flash(f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消")
                         return redirect('/bet')
 
