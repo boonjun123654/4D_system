@@ -649,31 +649,5 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateTotals();
 });
-
-document.getElementById("betForm").addEventListener("submit", async function (e) {
-  e.preventDefault();
-
-  const form = e.target;
-  const formData = new FormData(form);
-
-  try {
-    const response = await fetch("/bet", {
-      method: "POST",
-      body: formData,
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      alert("❌ " + result.error);  // 弹窗显示
-      return;
-    }
-
-    // 成功后 reload 页面或跳转
-    window.location.reload();
-  } catch (err) {
-    alert("❌ 网络错误，请稍后再试");
-  }
-});
 </script>
 {% endblock %}
