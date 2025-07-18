@@ -13,7 +13,7 @@
 <h2>下注页面</h2>
 
 {% if session.get('role') == 'admin' %}
-<form method="post" onsubmit="return handleBet();">
+<form method="post" id="betForm" onsubmit="return handleBet(event);">
     <div style="margin: 20px 0; display: flex; align-items: center; gap: 10px;">
         <label for="agent_id" style="font-weight: bold; font-size: 16px;">选择代理用户：</label>
         <select id="agent_id" name="agent_id" required
@@ -648,6 +648,32 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     updateTotals();
+});
+
+document.getElementById("betForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const form = e.target;
+  const formData = new FormData(form);
+
+  try {
+    const response = await fetch("/bet", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      alert("❌ " + result.error);  // 弹窗显示
+      return;
+    }
+
+    // 成功后 reload 页面或跳转
+    window.location.reload();
+  } catch (err) {
+    alert("❌ 网络错误，请稍后再试");
+  }
 });
 </script>
 {% endblock %}
