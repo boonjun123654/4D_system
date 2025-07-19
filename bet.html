@@ -1,0 +1,653 @@
+{% extends "layout.html" %}
+{% block content %}
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px; border-radius: 6px; margin-bottom: 20px;">
+      {% for message in messages %}
+        <div>{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<h2>下注页面</h2>
+
+{% if session.get('role') == 'admin' %}
+<form method="post" onsubmit="return handleBet();">
+    <div style="margin: 20px 0; display: flex; align-items: center; gap: 10px;">
+        <label for="agent_id" style="font-weight: bold; font-size: 16px;">选择代理用户：</label>
+        <select id="agent_id" name="agent_id" required
+                style="padding: 6px 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px;">
+            <option value="">-- 请选择代理 --</option>
+            {% for agent in agents %}
+                <option value="{{ agent.id }}">{{ agent.username }}</option>
+            {% endfor %}
+        </select>
+    </div>
+{% else %}
+<form method="post" onsubmit="return handleBet();">
+{% endif %}
+
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th rowspan="2">#</th>
+                <th rowspan="2">下注号码</th>
+                <th rowspan="2">B</th>
+                <th rowspan="2">S</th>
+                <th rowspan="2">A</th>
+                <th rowspan="2">C</th>
+                <th colspan="7">下注日期</th>
+                <th colspan="9">市场</th>
+                <th rowspan="2">种类</th>
+                <th rowspan="2">总额</th>
+                <th rowspan="2">💰中奖金额</th>
+            </tr>
+            <tr>
+                {% for d in range(7) %}
+                    <th style="width:40px;">
+                        <input type="checkbox" id="select_date_{{ d }}" onclick="toggleColumn('date', {{ d }})"><br>
+                        {{ (date_today + timedelta(days=d)).strftime("%-d/%-m") }}
+                    </th>
+                {% endfor %}
+                {% for m in ['M','P','T','S','B','K','W','H','E'] %}
+                    {% set bg = {
+                        'M': '#ffff00', 'P': '#0000ff', 'T': '#cc0000',
+                        'S': '#4c8ed1', 'B': '#e51d20', 'K': '#008835',
+                        'W': '#00540e', 'H': '#fed606', 'E': '#ffa500'
+                    }[m] %}
+                    <th style="background-color:{{ bg }};">
+                        <input type="checkbox" id="select_market_{{ m }}" onclick="toggleColumn('market', '{{ m }}')"><br>{{ m }}
+                    </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in range(1, 13) %}
+            <tr>
+                <td>{{ i }}</td>
+                <td>
+                    <input type="text" name="number{{ i }}" maxlength="4" inputmode="numeric"
+                           pattern="[0-9]{4}" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                           style="width: 80px;">
+                </td>
+                <td><input type="text" name="B{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
+                <td><input type="text" name="S{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
+                <td><input type="text" name="A{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
+                <td><input type="text" name="C{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
+
+                {% for d in range(7) %}
+                    <td><input type="checkbox" name="date{{ i }}_{{ d }}" class="date_col_{{ d }}" style="width:18px;height:18px;"></td>
+                {% endfor %}
+
+                {% for m in ['M','P','T','S','B','K','W','H','E'] %}
+                    {% set bg = {
+                        'M': '#ffff00', 'P': '#0000ff', 'T': '#cc0000',
+                        'S': '#4c8ed1', 'B': '#e51d20', 'K': '#008835',
+                        'W': '#00540e', 'H': '#fed606', 'E': '#ffa500'
+                    }[m] %}
+                    <td style="background-color:{{ bg }};">
+                        <input type="checkbox" name="market{{ i }}_{{ m }}" class="market_col_{{ m }}" style="width:18px;height:18px;">
+                    </td>
+                {% endfor %}
+
+                <td>
+                    <select name="type{{ i }}">
+                        <option>正字</option>
+                        <option>IBox</option>
+                        <option>Box</option>
+                    </select>
+                </td>
+                <td><span class="row-total">0.00</span></td>
+                <td>
+                    <span class="win-amount">0.00</span>
+                    <input type="hidden" name="win_amount{{ i }}" value="0">
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="20" style="text-align:right; font-weight:bold;">
+                    总下注金额：RM <span id="grand-total">0.00</span>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div style="margin-top: 10px;">
+        <button type="submit" style="font-size: 18px; padding: 8px 20px;">提交</button>
+        <button type="reset" style="font-size: 18px; padding: 8px 20px;">清除</button>
+    </div>
+</form>
+
+<!-- JS 脚本 -->
+<script>
+const odds = {
+    "M": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "P": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "T": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "S": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "B": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "K": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "W": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
+    "H": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}},
+    "E": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}}
+};
+
+function getHighestWin(markets, B, S, A, C, dateCount, type, number) {
+    let max = 0;
+    const comboFactor = (type === 'IBox') ? getCombinationCount(number) : 1;
+
+    for (const m of ['H','E','M','P','T','S','B','K','W']) {
+        if (!markets.includes(m)) continue;
+        const o = odds[m];
+        const payoutPerDraw =
+            B * (o.B?.['1st'] || 0) +
+            S * (o.S?.['1st'] || 0) +
+            A * (o.A?.['1st'] || 0) +
+            C * (o.C?.['1st'] || 0);
+        const totalPayout = payoutPerDraw / comboFactor;
+        if (totalPayout > max) max = totalPayout;
+    }
+    return max;
+}
+
+function updateTotals() {
+    let grandTotal = 0;
+    for (let i = 1; i <= 12; i++) {
+        const number = document.querySelector(`input[name="number${i}"]`)?.value || '';
+        const type = document.querySelector(`select[name="type${i}"]`)?.value || '正字';
+
+        const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
+        const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
+        const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
+        const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
+
+        let dateCount = 0;
+        const markets = [];
+        for (let d = 0; d < 7; d++) {
+            if (document.querySelector(`input[name="date${i}_${d}"]`)?.checked) dateCount++;
+        }
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            if (document.querySelector(`input[name="market${i}_${m}"]`)?.checked) {
+                markets.push(m);
+            }
+        }
+
+        const comboCount = getCombinationCount(number);
+        const factor = (type === 'Box') ? comboCount : 1;
+        const rowTotal = ((B + S + A + C) * factor) * dateCount * markets.length;
+        document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
+        grandTotal += rowTotal;
+
+        // 💰中奖金额计算
+        const win = getHighestWin(markets, B, S, A, C, dateCount, type, number);
+        document.querySelector(`input[name="win_amount${i}"]`).value = win.toFixed(2);
+        document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
+    }
+    document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
+}
+
+function handleBet() {
+    const malaysiaNow = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+    );
+    const cutoff = new Date(malaysiaNow);
+    cutoff.setHours(19, 0, 0, 0);
+
+    const selectedDateIndexes = new Set();
+    const selectedMarketKeys = new Set();
+
+    for (let i = 1; i <= 12; i++) {
+        const number = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!number) continue;
+
+        for (let d = 0; d < 7; d++) {
+            const checkbox = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (checkbox?.checked) selectedDateIndexes.add(d);
+        }
+
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            const checkbox = document.querySelector(`input[name="market${i}_${m}"]`);
+            if (checkbox?.checked) selectedMarketKeys.add(m);
+        }
+    }
+
+    const dateLabels = Array.from(selectedDateIndexes).map(d => {
+        const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
+        const [day, month] = rawLabel.split('/').map(n => n.padStart(2, '0'));
+        return `${day}/${month}`;
+    });
+
+    const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
+    const selectedMarkets = Array.from(selectedMarketKeys).join('') || '未选市场';
+
+    const today = malaysiaNow;
+    const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}`;
+    if (selectedDates.includes(todayStr) && malaysiaNow >= cutoff) {
+        alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
+        return false;
+    }
+
+    let total = 0;
+    let betLines = [];
+
+    for (let i = 1; i <= 12; i++) {
+        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!num) continue;
+
+        const type = document.querySelector(`select[name="type${i}"]`)?.value;
+        const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
+        const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
+        const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
+        const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
+
+        let line = `${num} =`;
+        if (B) line += ` ${B}B`;
+        if (S) line += ` ${S}S`;
+        if (A) line += ` ${A}A`;
+        if (C) line += ` ${C}C`;
+
+        if (type === 'IBox') line += ' (IBox)';
+        if (type === 'Box') line += ' (Box)';
+
+        const row = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
+        total += row;
+        betLines.push(line);
+    }
+    // ✅ 检查是否有同一号码+市场+日期 总 win_amount 超过 RM10000
+    const MAX_WIN = 10000;
+    const betMap = {};  // 结构：{ '6556_M_17/07': total_win }
+
+    for (let i = 1; i <= 12; i++) {
+        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!num) continue;
+
+        const win = parseFloat(document.querySelector(`input[name="win_amount${i}"]`)?.value) || 0;
+
+        const selectedDates = [];
+        for (let d = 0; d < 7; d++) {
+            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (cb?.checked) {
+                const label = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
+                selectedDates.push(label);  // 如 17/07
+            }
+        }
+
+        const selectedMarkets = [];
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            const cb = document.querySelector(`input[name="market${i}_${m}"]`);
+            if (cb?.checked) selectedMarkets.push(m);
+        }
+
+        for (const d of selectedDates) {
+            for (const m of selectedMarkets) {
+                const key = `${num}_${m}_${d}`;
+                betMap[key] = (betMap[key] || 0) + win;
+                if (betMap[key] > MAX_WIN) {
+                    alert(`⚠️ ${num} 在市场 ${m}，日期 ${d} 的总中奖金额已超过 RM${MAX_WIN}，请修改下注`);
+                    return false;
+                }
+            }
+        }
+    }
+
+    const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
+    if (!confirm(confirmMsg)) return false;
+
+    // ✅ 弹出下注详情弹窗（不影响 form 提交）
+    setTimeout(() => {
+        const finalText = selectedDates.map(date => {
+            return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
+        }).join('\n\n');
+
+        localStorage.setItem("bet_popup", finalText);
+        return true;
+
+        const modal = document.createElement('div');
+        modal.innerHTML = `
+            <div id="resultModal" style="
+                position:fixed;
+                top:20px;left: 10px;
+                background:#ffffff;
+                border-radius:12px;
+                box-shadow:0 4px 10px rgba(0,0,0,0.15);
+                padding:16px;
+                width:90%;
+                max-width:340px;
+                z-index:9999;
+                font-size:15px;
+                font-family:system-ui, sans-serif;
+            ">
+                <div id="resultText" style="
+                    white-space:pre-wrap;
+                    word-break:break-word;
+                    margin-bottom:16px;
+                ">${finalText}</div>
+                <div style="display:flex;justify-content:space-between;">
+                    <button onclick="copyResult()" style="
+                        flex:1;
+                        margin-right:10px;
+                        padding:8px;
+                        background:#007bff;
+                        color:white;
+                        border:none;
+                        border-radius:6px;
+                    ">复制</button>
+                    <button onclick="confirmResult()" style="
+                        flex:1;
+                        padding:8px;
+                        background:#28a745;
+                        color:white;
+                        border:none;
+                        border-radius:6px;
+                    ">确认</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }, 100);  // 延迟一点点，确保表单已成功触发
+
+    return true;  // ✅ 允许真正提交表单
+}
+function confirmResult() {
+    const modal = document.getElementById("resultModal");
+    if (modal) modal.remove();
+}
+
+function copyResult() {
+    const text = document.getElementById("resultText")?.innerText || "";
+    if (!text) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+        alert("✅ 已复制下注信息");
+    }).catch(err => {
+        alert("❌ 复制失败，请手动选取文字");
+        console.error("Clipboard error:", err);
+    });
+}
+
+function toggleColumn(type, key) {
+    let checkboxes;
+    if (type === 'date') {
+        checkboxes = document.querySelectorAll('.date_col_' + key);
+        const state = document.getElementById('select_date_' + key).checked;
+        checkboxes.forEach(cb => cb.checked = state);
+    }
+    if (type === 'market') {
+        checkboxes = document.querySelectorAll('.market_col_' + key);
+        const state = document.getElementById('select_market_' + key).checked;
+        checkboxes.forEach(cb => cb.checked = state);
+    }
+}
+
+function getCombinationCount(number) {
+    const digits = number.padStart(4, '0').split('');
+    const counts = {};
+    digits.forEach(d => counts[d] = (counts[d] || 0) + 1);
+    const values = Object.values(counts).sort((a, b) => b - a).join(',');
+    switch (values) {
+        case '4': return 1;
+        case '3,1': return 4;
+        case '2,2': return 6;
+        case '2,1,1': return 12;
+        case '1,1,1,1': return 24;
+        default: return 0;
+    }
+}
+
+function showBetPopup(text) {
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div id="resultModal" style="
+            position:fixed;
+            top:20px;left: 10px;
+            background:#ffffff;
+            border-radius:12px;
+            box-shadow:0 4px 10px rgba(0,0,0,0.15);
+            padding:16px;
+            width:90%;
+            max-width:340px;
+            z-index:9999;
+            font-size:15px;
+            font-family:system-ui, sans-serif;
+        ">
+            <div id="resultText" style="
+                white-space:pre-wrap;
+                word-break:break-word;
+                margin-bottom:16px;
+            ">${text}</div>
+            <div style="display:flex;justify-content:space-between;">
+                <button onclick="copyResult()" style="
+                    flex:1;
+                    margin-right:10px;
+                    padding:8px;
+                    background:#007bff;
+                    color:white;
+                    border:none;
+                    border-radius:6px;
+                ">复制</button>
+                <button onclick="confirmResult()" style="
+                    flex:1;
+                    padding:8px;
+                    background:#28a745;
+                    color:white;
+                    border:none;
+                    border-radius:6px;
+                ">确认</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
+
+    // 空格键跳格，Enter跳到下一行
+    inputs.forEach((input, idx) => {
+        input.addEventListener("keydown", function (e) {
+            if (e.key === " ") {
+                e.preventDefault();
+                if (idx + 1 < inputs.length) inputs[idx + 1].focus();
+            }
+            if (e.key === "Enter" && this.name.startsWith("number")) {
+                e.preventDefault();
+                const match = this.name.match(/^number(\d+)$/);
+                if (match) {
+                    const nextIndex = parseInt(match[1]) + 1;
+                    const nextInput = document.querySelector(`input[name="number${nextIndex}"]`);
+                    if (nextInput) nextInput.focus();
+                }
+            }
+        });
+    });
+
+        // ✅ 页面刷新后检查是否要显示下注详情弹窗
+    const savedPopup = localStorage.getItem("bet_popup");
+    if (savedPopup) {
+        showBetPopup(savedPopup);
+        localStorage.removeItem("bet_popup");
+    }
+
+
+    // 金额或号码变动时自动计算
+    document.querySelectorAll('input[type="text"], select').forEach(input => {
+        input.addEventListener('input', updateTotals);
+    });
+
+    // ✅ 包括所有勾选框（含下注行）
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', function () {
+            updateTotals();
+
+            // ✅ 只要变动了日期或市场的 checkbox，就重新应用规则
+            if (
+                this.name.startsWith('date') ||
+                this.name.startsWith('market') ||
+                this.id.startsWith('select_date_') ||
+                this.id.startsWith('select_market_')
+            ) {
+                applyDateMarketRules();
+            }
+        });
+    });
+
+    document.querySelector('button[type="reset"]').addEventListener('click', function () {
+        setTimeout(updateTotals, 100);
+    });
+
+    updateTotals();
+});
+
+// ✅ 限制不合法日期和市场选择逻辑
+function applyDateMarketRules() {
+    const malaysiaNow = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+    );
+    const baseDate = new Date(malaysiaNow);
+    baseDate.setHours(0, 0, 0, 0);
+
+    const weekdays = [];
+    for (let d = 0; d < 7; d++) {
+        const day = new Date(baseDate);
+        day.setDate(day.getDate() + d);
+        weekdays.push(day.getDay()); // 0=Sunday, ..., 6=Saturday
+    }
+
+    const restrictedMarkets = ['M','P','T','S','B','K','W'];
+
+    // 是否选中了非法日期（非 0/3/6）
+    let selectedInvalidDate = false;
+    for (let d = 0; d < 7; d++) {
+        const wd = weekdays[d];
+        const checkbox = document.getElementById(`select_date_${d}`);
+        if (checkbox?.checked && ![0, 3, 6].includes(wd)) {
+            selectedInvalidDate = true;
+            break;
+        }
+    }
+
+    // 是否选中了限制市场（MPTSBKW）
+    let selectedRestrictedMarket = false;
+    for (const m of restrictedMarkets) {
+        const checkbox = document.getElementById(`select_market_${m}`);
+        if (checkbox?.checked) {
+            selectedRestrictedMarket = true;
+            break;
+        }
+    }
+
+    // 🔁 遍历所有日期 checkbox（含每一行）
+    for (let d = 0; d < 7; d++) {
+        const wd = weekdays[d];
+        const isValidDate = [0, 3, 6].includes(wd);
+        const globalCheckbox = document.getElementById(`select_date_${d}`);
+
+        const shouldDisable = selectedRestrictedMarket && !isValidDate;
+        if (globalCheckbox) {
+            globalCheckbox.disabled = shouldDisable;
+            if (shouldDisable) globalCheckbox.checked = false;
+        }
+
+        // 所有下注行格子
+        for (let i = 1; i <= 12; i++) {
+            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (cb) {
+                cb.disabled = shouldDisable;
+                if (shouldDisable) cb.checked = false;
+            }
+        }
+    }
+
+    // 🔁 遍历所有市场 checkbox（含每一行）
+    for (const m of restrictedMarkets) {
+        const marketCheckbox = document.getElementById(`select_market_${m}`);
+        if (marketCheckbox) {
+            marketCheckbox.disabled = selectedInvalidDate;
+            if (selectedInvalidDate) marketCheckbox.checked = false;
+        }
+
+        for (let i = 1; i <= 12; i++) {
+            const cb = document.querySelector(`input[name="market${i}_${m}"]`);
+            if (cb) {
+                cb.disabled = selectedInvalidDate;
+                if (selectedInvalidDate) cb.checked = false;
+            }
+        }
+    }
+}
+
+// ✅ 页面加载 + 任意 checkbox 变动时触发限制检查
+function setupBetListeners() {
+    // ✅ 所有 checkbox 都监听
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', function () {
+            updateTotals();
+            applyDateMarketRules();  // 不管是下注行或表头，都执行限制逻辑
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    // ... 原有内容保留
+    // 替换如下监听逻辑：
+
+    const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
+    inputs.forEach((input, idx) => {
+        input.addEventListener("keydown", function (e) {
+            if (e.key === " ") {
+                e.preventDefault();
+                if (idx + 1 < inputs.length) inputs[idx + 1].focus();
+            }
+            if (e.key === "Enter" && this.name.startsWith("number")) {
+                e.preventDefault();
+                const match = this.name.match(/^number(\d+)$/);
+                if (match) {
+                    const nextIndex = parseInt(match[1]) + 1;
+                    const nextInput = document.querySelector(`input[name="number${nextIndex}"]`);
+                    if (nextInput) nextInput.focus();
+                }
+            }
+        });
+    });
+
+    setupBetListeners();
+
+    // ✅ 页面刷新后检查是否要显示下注详情弹窗
+    const savedPopup = localStorage.getItem("bet_popup");
+    if (savedPopup) {
+        showBetPopup(savedPopup);
+        localStorage.removeItem("bet_popup");
+    }
+
+    // ✅ 金额或号码变动时自动计算
+    document.querySelectorAll('input[type="text"], select').forEach(input => {
+        input.addEventListener('input', updateTotals);
+    });
+
+    // ✅ 启用限制逻辑监听器
+    setupBetListeners();
+
+    document.querySelector('button[type="reset"]').addEventListener('click', function () {
+        setTimeout(() => {
+            updateTotals();
+            applyDateMarketRules();
+        }, 100);
+    });
+
+    updateTotals();
+});
+</script>
+{% endblock %}
