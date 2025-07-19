@@ -311,6 +311,7 @@ function handleBet() {
         }).join('\n\n');
 
         localStorage.setItem("bet_popup", finalText);
+        return true;
 
         const modal = document.createElement('div');
         modal.innerHTML = `
