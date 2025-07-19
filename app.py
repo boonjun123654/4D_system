@@ -65,7 +65,7 @@ def bet():
         agents = []
 
     if request.method == 'POST':
-        now = datetime.now(malaysia)
+        now = datetime.now(timezone('Asia/Kuala_Lumpur'))
         today_str = now.strftime('%d/%m')
         selected_dates = set()
 
@@ -76,7 +76,7 @@ def bet():
                     selected_dates.add(date_str)
 
         if today_str in selected_dates and now.time() >= time(19, 0):
-            session['popup_error'] = "⚠️ 下注已经截止！"
+            flash("⚠️ 下注已经截止！")
             return redirect('/bet')
 
         if session.get('role') == 'admin':
@@ -101,8 +101,6 @@ def bet():
             if pattern == [2, 1, 1]: return 12
             if pattern == [1, 1, 1, 1]: return 24
             return 1
-
-        popup_text = request.form.get('bet_popup_text') or ''
 
         for i in range(1, 13):
             number = request.form.get(f'number{i}', '').strip()
@@ -132,24 +130,25 @@ def bet():
                 continue
 
             box_permutations = get_box_permutations(number) if bet_type == 'Box' else [number]
+            # 检查用排序（用于过滤器匹配），但保存原始号码
             normalized_number = ''.join(sorted(number)) if bet_type in ['Box', 'IBox'] else number
-            save_number = number
+            save_number = number  # 不管什么类型都保存原始号码
 
             for market in markets:
                 for date_str in dates:
-                    all_perms = get_box_permutations(number)
-                    existing_bets = db.session.query(FourDBet).filter(
-                        FourDBet.number.in_(all_perms),
-                        FourDBet.markets.any(market),
-                        FourDBet.dates.any(date_str),
-                        FourDBet.status == 'active'
-                    ).all()
+                        all_perms = get_box_permutations(number)  # 全部排列
+                        existing_bets = db.session.query(FourDBet).filter(
+                            FourDBet.number.in_(all_perms),
+                            FourDBet.markets.any(market),
+                            FourDBet.dates.any(date_str),
+                            FourDBet.status == 'active'
+                        ).all()
 
-                    existing_total = sum(float(eb.win_amount) for eb in existing_bets)
+                        existing_total = sum(float(eb.win_amount) for eb in existing_bets)
 
-                    if existing_total + win_amount > 10000:
-                        session['popup_error'] = f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消"
-                        return redirect('/bet')
+                        if existing_total + win_amount > 10000:
+                            flash(f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消")
+                            return redirect('/bet')
 
             factor = get_comb_count(number) if bet_type == 'Box' else 1
             total = (B + S + A + C) * factor * len(dates) * len(markets)
@@ -168,13 +167,10 @@ def bet():
             db.session.add(bet)
 
         db.session.commit()
-        session['popup'] = popup_text
+        flash("✅ 成功提交下注记录")
         return redirect('/bet')
 
-    popup_text = session.pop('popup', None)
-    popup_error = session.pop('popup_error', None)
-
-    return render_template('bet.html', date_today=date_today, timedelta=timedelta, results=results, agents=agents, popup_text=popup_text, popup_error=popup_error)
+    return render_template('bet.html', date_today=date_today, timedelta=timedelta, results=results, agents=agents)
 
 @app.route('/report')
 @login_required
