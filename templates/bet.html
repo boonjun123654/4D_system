@@ -316,6 +316,7 @@ function handleBet() {
         popupInput.name = "bet_popup_text";
         popupInput.value = finalText;
         document.querySelector("form").appendChild(popupInput);
+        localStorage.setItem("bet_popup", finalText);  // ✅ 将下注详情存在 localStorage
 
         return true;
 
