@@ -306,20 +306,12 @@ function handleBet() {
 
     // ✅ 弹出下注详情弹窗（不影响 form 提交）
     setTimeout(() => {
-        // ✅ 构造下注详情文字，准备传给后端
         const finalText = selectedDates.map(date => {
             return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
         }).join('\n\n');
 
-        // ✅ 创建隐藏 input，传递给后端
-        const popupInput = document.createElement("input");
-        popupInput.type = "hidden";
-        popupInput.name = "bet_popup_text";
-        popupInput.value = finalText;
-        document.querySelector("form").appendChild(popupInput);
-
-        // ✅ localStorage 不写入，等下注成功后再写
-        return true;  // 表单正常提交
+        localStorage.setItem("bet_popup", finalText);
+        return true;
 
         const modal = document.createElement('div');
         modal.innerHTML = `
