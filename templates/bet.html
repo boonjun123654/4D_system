@@ -204,16 +204,18 @@ function handleBet() {
     const cutoff = new Date(malaysiaNow);
     cutoff.setHours(19, 0, 0, 0);
 
-    // 日期和市场收集逻辑
     const selectedDateIndexes = new Set();
     const selectedMarketKeys = new Set();
+
     for (let i = 1; i <= 12; i++) {
         const number = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!number) continue;
+
         for (let d = 0; d < 7; d++) {
             const checkbox = document.querySelector(`input[name="date${i}_${d}"]`);
             if (checkbox?.checked) selectedDateIndexes.add(d);
         }
+
         for (const m of ['M','P','T','S','B','K','W','H','E']) {
             const checkbox = document.querySelector(`input[name="market${i}_${m}"]`);
             if (checkbox?.checked) selectedMarketKeys.add(m);
@@ -239,43 +241,6 @@ function handleBet() {
     let total = 0;
     let betLines = [];
 
-    // ✅ 中奖金额限制检查移前
-    const MAX_WIN = 10000;
-    const betMap = {};
-    for (let i = 1; i <= 12; i++) {
-        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
-        if (!num) continue;
-
-        const win = parseFloat(document.querySelector(`input[name="win_amount${i}"]`)?.value) || 0;
-
-        const selectedDates = [];
-        for (let d = 0; d < 7; d++) {
-            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
-            if (cb?.checked) {
-                const label = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
-                selectedDates.push(label);
-            }
-        }
-
-        const selectedMarkets = [];
-        for (const m of ['M','P','T','S','B','K','W','H','E']) {
-            const cb = document.querySelector(`input[name="market${i}_${m}"]`);
-            if (cb?.checked) selectedMarkets.push(m);
-        }
-
-        for (const d of selectedDates) {
-            for (const m of selectedMarkets) {
-                const key = `${num}_${m}_${d}`;
-                betMap[key] = (betMap[key] || 0) + win;
-                if (betMap[key] > MAX_WIN) {
-                    alert(`⚠️ ${num} 在市场 ${m}，日期 ${d} 的总中奖金额已超过 RM${MAX_WIN}，请修改下注`);
-                    return false;
-                }
-            }
-        }
-    }
-
-    // ✅ 再继续累加下注详情
     for (let i = 1; i <= 12; i++) {
         const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!num) continue;
@@ -299,18 +264,105 @@ function handleBet() {
         total += row;
         betLines.push(line);
     }
+    // ✅ 检查是否有同一号码+市场+日期 总 win_amount 超过 RM10000
+    const MAX_WIN = 10000;
+    const betMap = {};  // 结构：{ '6556_M_17/07': total_win }
+
+    for (let i = 1; i <= 12; i++) {
+        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!num) continue;
+
+        const win = parseFloat(document.querySelector(`input[name="win_amount${i}"]`)?.value) || 0;
+
+        const selectedDates = [];
+        for (let d = 0; d < 7; d++) {
+            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (cb?.checked) {
+                const label = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
+                selectedDates.push(label);  // 如 17/07
+            }
+        }
+
+        const selectedMarkets = [];
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            const cb = document.querySelector(`input[name="market${i}_${m}"]`);
+            if (cb?.checked) selectedMarkets.push(m);
+        }
+
+        for (const d of selectedDates) {
+            for (const m of selectedMarkets) {
+                const key = `${num}_${m}_${d}`;
+                betMap[key] = (betMap[key] || 0) + win;
+                if (betMap[key] > MAX_WIN) {
+                    alert(`⚠️ ${num} 在市场 ${m}，日期 ${d} 的总中奖金额已超过 RM${MAX_WIN}，请修改下注`);
+                    return false;
+                }
+            }
+        }
+    }
 
     const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
     if (!confirm(confirmMsg)) return false;
 
+    // ✅ 弹出下注详情弹窗（不影响 form 提交）
     setTimeout(() => {
         const finalText = selectedDates.map(date => {
-            return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`;
+            return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
         }).join('\n\n');
-        localStorage.setItem("bet_popup", finalText);
-    }, 100);
 
-    return true;
+        localStorage.setItem("bet_popup", finalText);
+        return true;
+
+        const modal = document.createElement('div');
+        modal.innerHTML = `
+            <div id="resultModal" style="
+                position:fixed;
+                top:20px;left: 10px;
+                background:#ffffff;
+                border-radius:12px;
+                box-shadow:0 4px 10px rgba(0,0,0,0.15);
+                padding:16px;
+                width:90%;
+                max-width:340px;
+                z-index:9999;
+                font-size:15px;
+                font-family:system-ui, sans-serif;
+            ">
+                <div id="resultText" style="
+                    white-space:pre-wrap;
+                    word-break:break-word;
+                    margin-bottom:16px;
+                ">${finalText}</div>
+                <div style="display:flex;justify-content:space-between;">
+                    <button onclick="copyResult()" style="
+                        flex:1;
+                        margin-right:10px;
+                        padding:8px;
+                        background:#007bff;
+                        color:white;
+                        border:none;
+                        border-radius:6px;
+                    ">复制</button>
+                    <button onclick="confirmResult()" style="
+                        flex:1;
+                        padding:8px;
+                        background:#28a745;
+                        color:white;
+                        border:none;
+                        border-radius:6px;
+                    ">确认</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }, 100);  // 延迟一点点，确保表单已成功触发
+
+    return true;  // ✅ 允许真正提交表单
+}
+function confirmResult() {
+    const modal = document.getElementById("resultModal");
+    if (modal) modal.remove();
 }
 
 function copyResult() {
