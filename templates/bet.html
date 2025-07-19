@@ -307,10 +307,16 @@ function handleBet() {
     // ✅ 弹出下注详情弹窗（不影响 form 提交）
     setTimeout(() => {
         const finalText = selectedDates.map(date => {
-            return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
+          return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
         }).join('\n\n');
 
-        localStorage.setItem("bet_popup", finalText);
+        // ✅ 存在 hidden input 保存下注详情
+        const popupInput = document.createElement("input");
+        popupInput.type = "hidden";
+        popupInput.name = "bet_popup_text";
+        popupInput.value = finalText;
+        document.querySelector("form").appendChild(popupInput);
+
         return true;
 
         const modal = document.createElement('div');
