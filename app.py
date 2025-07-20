@@ -76,8 +76,7 @@ def bet():
                     selected_dates.add(date_str)
 
         if today_str in selected_dates and now.time() >= time(19, 0):
-            flash("⚠️ 下注已经截止！")
-            return redirect('/bet')
+            return redirect('/bet?error=cutoff')
 
         if session.get('role') == 'admin':
             selected_agent_id = request.form.get('agent_id')
@@ -147,8 +146,7 @@ def bet():
                         existing_total = sum(float(eb.win_amount) for eb in existing_bets)
 
                         if existing_total + win_amount > 10000:
-                            flash(f"⚠️ {date_str} 市场 {market} 中号码 {number} 的预计奖金已超过 RM10000，下注取消")
-                            return redirect('/bet')
+                            return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
 
             factor = get_comb_count(number) if bet_type == 'Box' else 1
             total = (B + S + A + C) * factor * len(dates) * len(markets)
@@ -167,7 +165,6 @@ def bet():
             db.session.add(bet)
 
         db.session.commit()
-        flash("✅ 成功提交下注记录")
         return redirect('/bet')
 
     return render_template('bet.html', date_today=date_today, timedelta=timedelta, results=results, agents=agents)
@@ -309,11 +306,11 @@ def manage_agents():
         commission_group = request.form.get('commission_group')  # 修改点：读取 A/B
 
         if not username or not password or not commission_group:
-            flash("❗ 请填写完整信息")
+            return redirect('/admin/agents?error=missing')
         else:
             existing = Agent4D.query.filter_by(username=username).first()
             if existing:
-                flash("❌ 用户名已存在")
+                return redirect('/admin/agents?error=exists')
             else:
                 agent = Agent4D(
                     username=username,
@@ -322,7 +319,7 @@ def manage_agents():
                 )
                 db.session.add(agent)
                 db.session.commit()
-                flash(f"✅ 成功创建代理 {username}")
+                return redirect(f'/admin/agents?success={username}')
 
         return redirect('/admin/agents')
 
@@ -339,10 +336,9 @@ def update_agent_password(agent_id):
     if agent and new_pw:
         agent.password = new_pw
         db.session.commit()
-        flash(f"✅ 已更新 {agent.username} 密码")
+        return redirect(f"/admin/agents?pw_updated={agent.username}")
     else:
-        flash("❌ 更新失败")
-    return redirect('/admin/agents')
+        return redirect("/admin/agents?pw_error=1")
 
 @app.route('/admin/agents/<int:agent_id>/delete', methods=['POST'])
 @login_required
@@ -353,10 +349,9 @@ def delete_agent(agent_id):
     if agent:
         db.session.delete(agent)
         db.session.commit()
-        flash(f"✅ 已删除代理 {agent.username}")
+        return redirect(f'/admin/agents?deleted={username}')
     else:
-        flash("❌ 删除失败")
-    return redirect('/admin/agents')
+        return redirect('/admin/agents?error=delete')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -439,18 +434,15 @@ def delete_bet(bet_id):
 
     # ✅ 判断是否本人或管理员
     if session.get('role') != 'admin' and bet.agent_id != session.get('username'):
-        flash("❌ 无权限删除该下注记录")
-        return redirect('/history')
+        return redirect('/history?error=unauthorized')
 
     # ✅ 判断是否锁注
     if bet.status == 'locked':
-        flash("⚠️ 此下注记录已锁注，无法删除")
-        return redirect('/history')
+        return redirect('/history?error=locked')
 
     db.session.delete(bet)
     db.session.commit()
-    flash("✅ 已删除下注记录")
-    return redirect('/history')
+    return redirect('/history?deleted=1')
 
 if __name__ == '__main__':
     app.run(debug=True)
