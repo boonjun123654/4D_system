@@ -300,6 +300,7 @@ def history():
         grouped=grouped,
         start_date=start_date.strftime("%Y-%m-%d"),
         end_date=end_date.strftime("%Y-%m-%d"),
+        selected_agent=selected_agent,
         agents=agents
     )
 
@@ -453,11 +454,19 @@ def delete_bet(bet_id):
     db.session.delete(bet)
     db.session.commit()
 
-    selected_date = request.args.get("date") or request.form.get("selected_date")
-    if selected_date:
-        return redirect(f"/history?date={selected_date}")
+    start = request.args.get("start_date") or request.form.get("start_date")
+    end = request.args.get("end_date") or request.form.get("end_date")
+    agent = request.args.get("agent_id") or request.form.get("agent_id")
 
-    return redirect('/history?deleted=1')
+    query = f"?deleted=1"
+    if start:
+        query += f"&start_date={start}"
+    if end:
+        query += f"&end_date={end}"
+    if agent:
+        query += f"&agent_id={agent}"
+
+    return redirect(f"/history{query}")
 
 if __name__ == '__main__':
     app.run(debug=True)
