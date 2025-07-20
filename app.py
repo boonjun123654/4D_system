@@ -451,7 +451,7 @@ def delete_bet(bet_id):
     if bet.status == 'locked':
         return redirect('/history?error=locked')
 
-    db.session.delete(bet)
+    bet.status = 'delete'
     db.session.commit()
 
     start = request.args.get("start_date") or request.form.get("start_date")
