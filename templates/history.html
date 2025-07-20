@@ -86,4 +86,19 @@
 {% else %}
     <p style="color: #cc0000; font-size: 16px;">❗ 没有记录</p>
 {% endfor %}
+
+<script>
+const params = new URLSearchParams(window.location.search);
+
+if (params.get("deleted") === "1") {
+    alert("✅ 已删除下注记录");
+} else if (params.get("error") === "unauthorized") {
+    alert("❌ 无权限删除该下注记录");
+} else if (params.get("error") === "locked") {
+    alert("⚠️ 此下注记录已锁注，无法删除");
+}
+
+// 清除参数，避免刷新时重复提示
+history.replaceState({}, document.title, location.pathname);
+</script>
 {% endblock %}
