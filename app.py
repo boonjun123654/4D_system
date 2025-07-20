@@ -452,6 +452,11 @@ def delete_bet(bet_id):
 
     db.session.delete(bet)
     db.session.commit()
+
+    selected_date = request.args.get("date") or request.form.get("selected_date")
+    if selected_date:
+        return redirect(f"/history?date={selected_date}")
+
     return redirect('/history?deleted=1')
 
 if __name__ == '__main__':
