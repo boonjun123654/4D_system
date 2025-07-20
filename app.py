@@ -370,10 +370,14 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        if username == 'admin' and password == 'admin123':
-            session['username'] = 'admin'
+        admin_user = os.getenv('ADMIN_USER')
+        admin_pass = os.getenv('ADMIN_PASS')
+
+        if username == admin_user and password == admin_pass:
+            session['username'] = admin_user
             session['role'] = 'admin'
             return redirect('/')
+
         agent = Agent4D.query.filter_by(username=username, password=password).first()
         if agent:
             session['username'] = agent.username
