@@ -38,15 +38,6 @@ scheduler = BackgroundScheduler(timezone='Asia/Kuala_Lumpur')
 scheduler.add_job(lock_today_bets,CronTrigger(hour=19, minute=0))
 scheduler.start()
 
-@app.route('/admin/lock_bets')
-@login_required
-def admin_lock_bets():
-    if session.get('role') != 'admin':
-        return "❌ 无权限"
-    with app.app_context():
-        lock_today_bets()
-    return redirect('/admin/agents?locked=1')
-
 # 登录保护装饰器
 def login_required(view_func):
     @wraps(view_func)
@@ -59,6 +50,15 @@ def login_required(view_func):
 @app.route("/")
 def index():
     return render_template("index.html", odds=odds)
+
+@app.route('/admin/lock_bets')
+@login_required
+def admin_lock_bets():
+    if session.get('role') != 'admin':
+        return "❌ 无权限"
+    with app.app_context():
+        lock_today_bets()
+    return redirect('/admin/agents?locked=1')
 
 @app.route('/bet', methods=['GET', 'POST'])
 @login_required
