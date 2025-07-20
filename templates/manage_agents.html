@@ -57,5 +57,43 @@
         {% endfor %}
     </tbody>
 </table>
+<script>
+    const params = new URLSearchParams(window.location.search);
 
+    if (params.get("error") === "missing") {
+        alert("❗ 请填写完整信息");
+    } else if (params.get("error") === "exists") {
+        alert("❌ 用户名已存在");
+    } else if (params.get("success")) {
+        const username = params.get("success");
+        alert(`✅ 成功创建代理 ${username}`);
+    }
+
+    // 清除参数避免刷新重复弹窗
+    history.replaceState({}, document.title, location.pathname);
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("pw_updated")) {
+        const username = params.get("pw_updated");
+        alert(`✅ 已更新 ${username} 的密码`);
+    } else if (params.get("pw_error")) {
+        alert("❌ 密码更新失败，请确保输入有效");
+    }
+
+    // 清除 URL 参数，防止刷新重复提示
+    history.replaceState({}, document.title, location.pathname);
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("deleted")) {
+        const username = params.get("deleted");
+        alert(`✅ 已删除代理 ${username}`);
+    } else if (params.get("error") === "delete") {
+        alert("❌ 删除失败");
+    }
+ 
+    history.replaceState({}, document.title, location.pathname);
+
+</script>
 {% endblock %}
