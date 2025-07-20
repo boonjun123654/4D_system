@@ -76,6 +76,7 @@
                     </button>
                 {% else %}
                     <form method="post"
+                          style="flex: 1"
                           action="/delete_bet/{{ bet.id }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
                           onsubmit="return confirm('确认删除此下注？');">
                         <input type="hidden" name="start_date" value="{{ start_date }}">
