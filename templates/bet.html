@@ -306,8 +306,9 @@ function handleBet() {
 
     // ✅ 弹出下注详情弹窗（不影响 form 提交）
     setTimeout(() => {
+        const formattedTotal = Number.isInteger(total) ? total : total.toFixed(2);
         const finalText = selectedDates.map(date => {
-            return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${total.toFixed(2)}`
+            return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${formattedTotal}`
         }).join('\n\n');
 
         localStorage.setItem("bet_popup", finalText);
@@ -319,6 +320,7 @@ function handleBet() {
                 position:fixed;
                 top:20px;left: 10px;
                 background:#ffffff;
+                border: 1px solid black;
                 border-radius:12px;
                 box-shadow:0 4px 10px rgba(0,0,0,0.15);
                 padding:16px;
