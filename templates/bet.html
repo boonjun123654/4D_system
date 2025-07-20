@@ -597,5 +597,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateTotals();
 });
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "cutoff") {
+        alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
+        history.replaceState({}, document.title, location.pathname)
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "limit") {
+        const number = params.get("number") || '';
+        const market = params.get("market") || '';
+        const date = params.get("date") || '';
+        alert(`⚠️ ${date} 市场 ${market} 中号码 ${number} 的预计奖金已超过 RM10000，下注取消`);
+
+        // 清除参数，防止刷新重复弹窗
+        history.replaceState({}, document.title, location.pathname);
+    }
+
 </script>
 {% endblock %}
