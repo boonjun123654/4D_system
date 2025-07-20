@@ -312,52 +312,7 @@ function handleBet() {
         }).join('\n\n');
 
         localStorage.setItem("bet_popup", finalText);
-        return true;
-
-        const modal = document.createElement('div');
-        modal.innerHTML = `
-            <div id="resultModal" style="
-                position:fixed;
-                top:20px;left: 10px;
-                background:#ffffff;
-                border: 1px solid black;
-                border-radius:12px;
-                box-shadow:0 4px 10px rgba(0,0,0,0.15);
-                padding:16px;
-                width:90%;
-                max-width:340px;
-                z-index:9999;
-                font-size:15px;
-                font-family:system-ui, sans-serif;
-            ">
-                <div id="resultText" style="
-                    white-space:pre-wrap;
-                    word-break:break-word;
-                    margin-bottom:16px;
-                ">${finalText}</div>
-                <div style="display:flex;justify-content:space-between;">
-                    <button onclick="copyResult()" style="
-                        flex:1;
-                        margin-right:10px;
-                        padding:8px;
-                        background:#007bff;
-                        color:white;
-                        border:none;
-                        border-radius:6px;
-                    ">复制</button>
-                    <button onclick="confirmResult()" style="
-                        flex:1;
-                        padding:8px;
-                        background:#28a745;
-                        color:white;
-                        border:none;
-                        border-radius:6px;
-                    ">确认</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        showBetPopup(finalText);
     }, 100);  // 延迟一点点，确保表单已成功触发
 
     return true;  // ✅ 允许真正提交表单
