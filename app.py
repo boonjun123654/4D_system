@@ -51,7 +51,7 @@ def login_required(view_func):
 def index():
     return render_template("index.html", odds=odds)
 
-@app.route('/admin/lock_bets')
+@app.route('/admin/lock_bets', methods=['POST'])
 @login_required
 def admin_lock_bets():
     if session.get('role') != 'admin':
