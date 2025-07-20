@@ -27,15 +27,14 @@ with app.app_context():
 def lock_today_bets():
     now = datetime.now(timezone('Asia/Kuala_Lumpur'))
     today_str = now.strftime("%d/%m")
-    bets = FourDBet.query.filter(FourDBet.dates.contains([today_str]), FourDBet.status == 'active').all()
+    bets = FourDBet.query.filter(FourDBet.dates.any(today_str), FourDBet.status == 'active').all()
     for bet in bets:
         bet.status = 'locked'
     db.session.commit()
     print(f"[{now}] ✅ 锁注完成 {len(bets)} 条")
 
 scheduler = BackgroundScheduler(timezone='Asia/Kuala_Lumpur')
-scheduler.add_job(lock_today_bets,
- CronTrigger(hour=19, minute=0))
+scheduler.add_job(lock_today_bets,CronTrigger(hour=19, minute=0))
 scheduler.start()
 
 # 登录保护装饰器
