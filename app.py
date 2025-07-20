@@ -445,4 +445,6 @@ def delete_bet(bet_id):
     return redirect('/history?deleted=1')
 
 if __name__ == '__main__':
+    with app.app_context():
+        lock_today_bets()
     app.run(debug=True)
