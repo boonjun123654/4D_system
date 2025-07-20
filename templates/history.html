@@ -75,7 +75,8 @@
                         已锁注
                     </button>
                 {% else %}
-                    <form method="POST" action="/delete_bet/{{ bet.id }}" onsubmit="return confirm('确认是否删除该下注？');" style="flex: 1;">
+                    <form method="post" action="/delete_bet/{{ bet.id }}?date={{ selected_date }}" onsubmit="return confirm('确认删除此下注？');">
+                        <input type="hidden" name="selected_date" value="{{ selected_date }}">
                         <button type="submit" style="width: 100%; padding: 6px; background-color:#dc3545; color:white; border:none; border-radius:4px;">删除</button>
                     </form>
                  {% endif %}
