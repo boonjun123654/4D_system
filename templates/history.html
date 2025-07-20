@@ -82,6 +82,10 @@
                     <button type="button" disabled style="flex: 1; padding: 6px; background-color:#ccc; color:#666; border:none; border-radius:4px; cursor: not-allowed;">
                         已锁注
                     </button>
+                {% elif bet.status == 'delete' %}
+                    <div style="flex: 1; text-align: center; padding: 6px; background-color: #f8d7da; color: #721c24; border-radius: 4px;">
+                        🗑️ 已删除
+                    </div>
                 {% else %}
                     <form method="post"
                           style="flex: 1"
@@ -94,13 +98,8 @@
                         {% endif %}
                         <button type="submit" style="width: 100%; padding: 6px; background-color:#dc3545; color:white; border:none; border-radius:4px; font-size: 15px;">删除下注</button>
                     </form>
-                 {% endif %}
+                {% endif %}
             </div>
-            {% else %}
-                <div style="text-align: center; font-size: 14px; padding-top: 8px;">
-                    🗑️ 已删除
-                </div>
-            {% endif %}
         </div>
         {% endfor %}
     </div>
