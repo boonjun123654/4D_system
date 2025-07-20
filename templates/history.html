@@ -38,7 +38,15 @@
 
     <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
         {% for bet in items %}
-        <div style="width: 260px; border: 1px solid #ddd; padding: 10px; border-radius: 8px; background-color: #fff; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); font-family: monospace; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+        <div style="width: 260px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;
+            {% if bet.status == 'delete' %}
+                background-color: #f8d7da; color: #721c24; opacity: 0.6;
+            {% else %}
+                background-color: #fff;
+            {% endif %}
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.05); font-family: monospace;
+            display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+
             <!-- 顶部代理信息 -->
             <div style="font-size: 14px; background: #f8f8f8; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px;">
                 👤 <strong>代理：</strong>{{ bet.agent_id }}
@@ -88,6 +96,11 @@
                     </form>
                  {% endif %}
             </div>
+            {% else %}
+                <div style="text-align: center; font-size: 14px; padding-top: 8px;">
+                    🗑️ 已删除
+                </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
