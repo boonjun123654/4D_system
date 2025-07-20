@@ -512,8 +512,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    setupBetListeners();
-
     // ✅ 页面刷新后检查是否要显示下注详情弹窗
     const savedPopup = localStorage.getItem("bet_popup");
     if (savedPopup) {
@@ -562,7 +560,6 @@ document.addEventListener("DOMContentLoaded", function () {
         history.replaceState({}, document.title, location.pathname)
     }
 
-    const params = new URLSearchParams(window.location.search);
     if (params.get("error") === "limit") {
         const number = params.get("number") || '';
         const market = params.get("market") || '';
