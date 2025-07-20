@@ -23,6 +23,11 @@
     </div>
 </form>
 
+<form method="post" action="/admin/lock_bets" onsubmit="return confirm('确认要锁定今日所有注单？');" style="margin-bottom: 20px;">
+    <button type="submit" style="padding: 8px 20px; background-color: #ff8800; color: white; border: none; border-radius: 6px; font-size: 15px;">
+        🔒 手动锁注（今日）
+    </button>
+</form>
 <hr>
 
 <h2>👥 已创建代理</h2>
@@ -84,7 +89,11 @@
     } else if (params.get("error") === "notfound") {
         alert("❌ 删除失败，代理不存在");
     }
-    // ✅ 清除 URL 参数，防止重复提示
+
+    if (params.get("locked") === "1") {
+        alert("✅ 已成功执行今日锁注");
+    }
     history.replaceState({}, document.title, location.pathname);
+
 </script>
 {% endblock %}
