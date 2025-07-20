@@ -27,6 +27,7 @@ with app.app_context():
 def lock_today_bets():
     now = datetime.now(timezone('Asia/Kuala_Lumpur'))
     today_str = now.strftime("%d/%m")
+    print(f"[DEBUG] 今天日期: {today_str}")
     bets = FourDBet.query.filter(FourDBet.dates.any(today_str), FourDBet.status == 'active').all()
     for bet in bets:
         bet.status = 'locked'
