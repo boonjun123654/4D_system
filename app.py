@@ -347,6 +347,7 @@ def delete_agent(agent_id):
         return redirect('/')
     agent = Agent4D.query.get(agent_id)
     if agent:
+        username = agent.username
         db.session.delete(agent)
         db.session.commit()
         return redirect(f'/admin/agents?deleted={username}')
