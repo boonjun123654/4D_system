@@ -35,22 +35,27 @@
     <div style="background: #f2f2f2; padding: 10px; margin-top: 20px; font-weight: bold;">
         📅 {{ date }}
     </div>
+    <div style="display: flex; gap: 8px;">
+        <a href="/bet?ref={{ bet.id }}" style="flex: 1;">
+            <button type="button" style="width: 100%; padding: 6px; background-color:#007bff; color:white; border:none; border-radius:4px; font-size: 15px;">重新下注</button>
+        </a>
 
-    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
-        {% for bet in items %}
-        <div style="width: 260px; border: 1px solid #ddd; padding: 10px; border-radius: 8px; background-color: #fff; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); font-family: monospace; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-            <!-- 顶部代理信息 -->
-            <div style="font-size: 14px; background: #f8f8f8; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px;">
-                👤 <strong>代理：</strong>{{ bet.agent_id }}
-            </div>
+        {% if bet.status == 'locked' %}
+            <button type="button" disabled style="flex: 1; padding: 6px; background-color:#ccc; color:#666; border:none; border-radius:4px; cursor: not-allowed; font-size: 15px;">
+                已锁注
+            </button>
+        {% else %}
+            <form method="post" action="/delete_bet/{{ bet.id }}?start_date={{ start_date }}&end_date={{ end_date }}{% if session.role == 'admin' and request.args.get('agent_id') %}&agent_id={{ request.args.get('agent_id') }}{% endif %}" onsubmit="return confirm('确认删除此下注？');" style="flex: 1;">
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="end_date" value="{{ end_date }}">
+                {% if session.role == 'admin' %}
+                    <input type="hidden" name="agent_id" value="{{ request.args.get('agent_id') }}">
+                {% endif %}
+                <button type="submit" style="width: 100%; padding: 6px; background-color:#dc3545; color:white; border:none; border-radius:4px; font-size: 15px;">删除</button>
+            </form>
+        {% endif %}
+    </div>
 
-            <!-- 中部下注详情 -->
-            <div style="flex-grow: 1; margin-bottom: 40px; font-size: 14px;">
-                {% for d in bet.dates %}
-                    <div><strong>{{ d }}</strong></div>
-                    <div>{{ bet.markets | join('') }}</div>
-                {% endfor %}
-                <div>
                     {{ bet.number }} =
                     {% if bet.b %}{{ "%.1f"|format(bet.b)|replace(".0", "") }}B {% endif %}
                     {% if bet.s %}{{ "%.1f"|format(bet.s)|replace(".0", "") }}S {% endif %}
