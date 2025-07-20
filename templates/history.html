@@ -40,7 +40,7 @@
         {% for bet in items %}
         <div style="width: 260px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;
             {% if bet.status == 'delete' %}
-                background-color: #f1f1f1; color: #666; opacity: 0.6;
+                background-color: #be99c2; color: #666; opacity: 0.6;
             {% else %}
                 background-color: #fff;
             {% endif %}
@@ -83,7 +83,7 @@
                         已锁注
                     </button>
                 {% elif bet.status == 'delete' %}
-                    <div style="flex: 1; text-align: center; padding: 6px; background-color: #f8d7da; color: #721c24; border-radius: 4px;">
+                    <div style="flex: 1; text-align: center; padding: 6px; background-color: #0a0a0a; color: #ffffff; border-radius: 4px;">
                         🗑️ 已删除
                     </div>
                 {% else %}
