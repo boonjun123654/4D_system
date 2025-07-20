@@ -80,12 +80,10 @@
 
     // ✅ 删除代理
     if (params.get("deleted")) {
-        const username = params.get("deleted");
-        alert(`✅ 已删除代理 ${username}`);
-    } else if (params.get("error") === "delete") {
-        alert("❌ 删除失败");
+        alert(`✅ 成功删除代理：${params.get("deleted")}`);
+    } else if (params.get("error") === "notfound") {
+        alert("❌ 删除失败，代理不存在");
     }
-
     // ✅ 清除 URL 参数，防止重复提示
     history.replaceState({}, document.title, location.pathname);
 </script>
