@@ -1,7 +1,13 @@
-<!-- templates/admin_draw_input.html -->
 {% extends "layout.html" %}
 {% block content %}
 <h2>上传开奖成绩（4D）</h2>
+
+<div style="margin-bottom: 10px;">
+    <label for="global_date"><strong>统一选择日期：</strong></label>
+    <input type="date" id="global_date" onchange="applyGlobalDate()">
+    <span id="weekday_tip" style="margin-left: 10px; font-weight: bold;"></span>
+</div>
+
 <form method="POST" action="/admin/draw_input">
     <table border="1" cellpadding="6" cellspacing="0">
         <thead>
@@ -17,9 +23,9 @@
         </thead>
         <tbody>
             {% for m in ['M','P','T','S','B','K','W','H','E'] %}
-            <tr>
+            <tr data-market="{{ m }}">
                 <td><strong>{{ m }}</strong></td>
-                <td><input type="date" name="date_{{ m }}" required></td>
+                <td><input type="date" name="date_{{ m }}" class="market-date" required></td>
                 <td><input type="text" name="first_{{ m }}" maxlength="4"></td>
                 <td><input type="text" name="second_{{ m }}" maxlength="4"></td>
                 <td><input type="text" name="third_{{ m }}" maxlength="4"></td>
@@ -32,4 +38,33 @@
     <br>
     <button type="submit">提交开奖</button>
 </form>
+
+<script>
+function applyGlobalDate() {
+    const selectedDate = document.getElementById('global_date').value;
+    if (!selectedDate) return;
+
+    // 把日期填入所有市场的 input
+    document.querySelectorAll('.market-date').forEach(el => {
+        el.value = selectedDate;
+    });
+
+    const weekday = new Date(selectedDate).getDay();  // 0=Sunday, ..., 6=Saturday
+    const tip = document.getElementById('weekday_tip');
+
+    // 0=日, 3=三, 6=六 是合法日
+    const isAllowedDay = [0, 3, 6].includes(weekday);
+    tip.textContent = isAllowedDay ? "✅ 可输入所有市场" : "⚠️ 非开奖日，仅可输入 H/E 市场";
+
+    document.querySelectorAll("tr[data-market]").forEach(row => {
+        const m = row.getAttribute("data-market");
+        const isHE = ['H', 'E'].includes(m);
+        const allowInput = isAllowedDay || isHE;
+
+        row.querySelectorAll('input').forEach(input => {
+            input.disabled = !allowInput && !isHE && input.name.startsWith('first_');
+        });
+    });
+}
+</script>
 {% endblock %}
