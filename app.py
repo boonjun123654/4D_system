@@ -516,15 +516,15 @@ def admin_draw_input():
             special = request.form.get(f'special_{market}')
             consolation = request.form.get(f'consolation_{market}')
 
-            if first and second and third:
+            if date and (first or second or third or special or consolation):
                 result = DrawResult4D(
                     date=date,
                     market=market,
-                    first=first,
-                    second=second,
-                    third=third,
-                    special=special,
-                    consolation=consolation
+                    first=first or None,
+                    second=second or None,
+                    third=third or None,
+                    special=special or None,
+                    consolation=consolation or None
                 )
                 db.session.add(result)
         db.session.commit()
