@@ -7,6 +7,7 @@ from utils import calculate_payout
 from sqlalchemy import func,any_
 from models import db, FourDBet, Agent4D,DrawResult4D  
 from collections import defaultdict
+from itertools import permutations
 from functools import wraps
 from decimal import Decimal
 import pytesseract
@@ -177,6 +178,96 @@ def bet():
         return redirect('/bet')
 
     return render_template('bet.html', date_today=date_today, timedelta=timedelta, results=results, agents=agents)
+
+@app.route('/winning')
+def winning_view():
+    if 'username' not in session:
+        return redirect('/login')
+
+    role = session.get('role')
+    username = session.get('username')
+
+    # 获取所有开奖结果（转为字典方便查询）
+    all_results = DrawResult4D.query.all()
+    result_map = defaultdict(dict)  # result_map[date][market] = {...}
+    for r in all_results:
+        result_map[r.date.strftime("%Y-%m-%d")][r.market] = {
+            "1st": r.first,
+            "2nd": r.second,
+            "3rd": r.third,
+            "special": r.special.split(',') if r.special else [],
+            "consolation": r.consolation.split(',') if r.consolation else []
+        }
+
+    # 查询下注数据
+    if role == 'admin':
+        bets = FourDBet.query.filter_by(status='locked').all()
+    else:
+        bets = FourDBet.query.filter_by(status='locked', agent_id=username).all()
+
+    results = []
+    for bet in bets:
+        win_total = 0
+        number = bet.number
+        type_ = bet.type
+        combo_numbers = get_box_combinations(number) if type_ in ['Box', 'IBox'] else [number]
+
+        for date_str in bet.dates:
+            date_obj = datetime.strptime(date_str, "%d/%m").replace(year=datetime.now().year)
+            date_key = date_obj.strftime("%Y-%m-%d")
+
+            for market in bet.markets:
+                market_result = result_map.get(date_key, {}).get(market)
+                if not market_result:
+                    continue
+
+                # 对每个组合号码检查是否中奖
+                for combo in combo_numbers:
+                    for prize_name in ['1st', '2nd', '3rd']:
+                        if combo == market_result[prize_name]:
+                            win_total += get_odds(market, prize_name, bet, type_)
+                    for prize_name in ['special', 'consolation']:
+                        if combo in market_result[prize_name]:
+                            win_total += get_odds(market, prize_name, bet, type_)
+
+        if win_total > 0:
+            results.append({
+                "agent_id": bet.agent_id,
+                "number": number,
+                "type": type_,
+                "markets": ','.join(bet.markets),
+                "dates": ','.join(bet.dates),
+                "b": float(bet.b),
+                "s": float(bet.s),
+                "a": float(bet.a),
+                "c": float(bet.c),
+                "win_amount": round(win_total, 2)
+            })
+
+    return render_template("winning.html", results=results)
+
+def get_box_combinations(number):
+    if len(number) != 4 or not number.isdigit():
+        return []
+    return sorted(set([''.join(p) for p in permutations(number)]))
+
+def get_odds(market, prize_name, bet, type_):
+    try:
+        market_odds = odds[market]
+        total = 0
+        if bet.b:
+            total += float(bet.b) * market_odds["B"].get(prize_name, 0)
+        if bet.s:
+            total += float(bet.s) * market_odds["S"].get(prize_name, 0)
+        if bet.a:
+            total += float(bet.a) * market_odds["A"].get(prize_name, 0)
+        if bet.c:
+            total += float(bet.c) * market_odds["C"].get(prize_name, 0)
+        if type_ == "IBox":
+            return total / len(get_box_combinations(bet.number))
+        return total
+    except:
+        return 0
 
 @app.route('/report')
 @login_required
