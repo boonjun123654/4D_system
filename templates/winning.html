@@ -2,44 +2,54 @@
 {% block content %}
 <h2>🎉 中奖记录</h2>
 
-{% if results %}
-<table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; margin-top: 20px; font-size: 15px;">
-    <thead style="background: #f0f0f0;">
-        <tr>
-            {% if session.get('role') == 'admin' %}
-                <th>代理</th>
-            {% endif %}
-            <th>号码</th>
-            <th>类型</th>
-            <th>市场</th>
-            <th>日期</th>
-            <th>B</th>
-            <th>S</th>
-            <th>A</th>
-            <th>C</th>
-            <th>中奖金额 (RM)</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in results %}
-        <tr>
-            {% if session.get('role') == 'admin' %}
-                <td>{{ row.agent_id }}</td>
-            {% endif %}
-            <td>{{ row.number }}</td>
-            <td>{{ row.type }}</td>
-            <td>{{ row.markets }}</td>
-            <td>{{ row.dates }}</td>
-            <td>{{ "%.2f"|format(row.b) }}</td>
-            <td>{{ "%.2f"|format(row.s) }}</td>
-            <td>{{ "%.2f"|format(row.a) }}</td>
-            <td>{{ "%.2f"|format(row.c) }}</td>
-            <td style="font-weight: bold; color: green;">{{ "%.2f"|format(row.win_amount) }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<form method="get" action="/winning" style="margin-top: 10px;">
+    <label for="selected_date">选择日期：</label>
+    <input type="date" id="selected_date" name="date" value="{{ selected_date }}">
+    <button type="submit">查询</button>
+</form>
+
+{% if results is not none %}
+    {% if results %}
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; margin-top: 20px; font-size: 15px;">
+        <thead style="background: #f0f0f0;">
+            <tr>
+                {% if session.get('role') == 'admin' %}
+                    <th>代理</th>
+                {% endif %}
+                <th>号码</th>
+                <th>类型</th>
+                <th>市场</th>
+                <th>日期</th>
+                <th>B</th>
+                <th>S</th>
+                <th>A</th>
+                <th>C</th>
+                <th>中奖金额 (RM)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in results %}
+            <tr>
+                {% if session.get('role') == 'admin' %}
+                    <td>{{ row.agent_id }}</td>
+                {% endif %}
+                <td>{{ row.number }}</td>
+                <td>{{ row.type }}</td>
+                <td>{{ row.markets }}</td>
+                <td>{{ row.dates }}</td>
+                <td>{{ "%.2f"|format(row.b) }}</td>
+                <td>{{ "%.2f"|format(row.s) }}</td>
+                <td>{{ "%.2f"|format(row.a) }}</td>
+                <td>{{ "%.2f"|format(row.c) }}</td>
+                <td style="font-weight: bold; color: green;">{{ "%.2f"|format(row.win_amount) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p style="margin-top: 20px;">⚠️ 当前所选日期暂无中奖记录。</p>
+    {% endif %}
 {% else %}
-<p style="margin-top: 20px;">⚠️ 当前暂无中奖记录。</p>
+    <p style="margin-top: 20px;">请先选择一个日期来查看中奖记录。</p>
 {% endif %}
 {% endblock %}
