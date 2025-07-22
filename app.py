@@ -193,6 +193,7 @@ def winning_view():
 
     if selected_date:
         # 加载开奖结果
+        selected_dt = datetime.strptime(selected_date, "%Y-%m-%d").date(
         all_results = DrawResult4D.query.filter_by(date=selected_date).all()
         result_map = defaultdict(dict)
         for r in all_results:
@@ -235,13 +236,9 @@ def winning_view():
                 for combo in combo_numbers:
                     for prize_name in ['1st', '2nd', '3rd']:
                         if combo == market_result[prize_name]:
-                            single_market_bet = copy.deepcopy(bet)
-                            single_market_bet.markets = [market]  # 只保留当前 market
                             win_total += get_odds(market, prize_name, single_market_bet, type_)
                     for prize_name in ['special', 'consolation']:
                         if combo in market_result[prize_name]:
-                            single_market_bet = copy.deepcopy(bet)
-                            single_market_bet.markets = [market]  # 只保留当前 market
                             win_total += get_odds(market, prize_name, single_market_bet, type_)
 
             if win_total > 0:
