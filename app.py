@@ -236,10 +236,10 @@ def winning_view():
                 for combo in combo_numbers:
                     for prize_name in ['1st', '2nd', '3rd']:
                         if combo == market_result[prize_name]:
-                            win_total += get_odds(market, prize_name, single_market_bet, type_)
+                            win_total += get_odds(market, prize_name, bet, type_)
                     for prize_name in ['special', 'consolation']:
                         if combo in market_result[prize_name]:
-                            win_total += get_odds(market, prize_name, single_market_bet, type_)
+                            win_total += get_oddsmarket, prize_name, bet, type_)
 
             if win_total > 0:
                 results.append({
