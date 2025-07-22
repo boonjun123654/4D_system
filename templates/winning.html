@@ -2,19 +2,19 @@
 {% block content %}
 <h2>🎉 中奖记录</h2>
 
-<form method="get" action="/winning" style="margin-top: 10px;">
-    <label for="selected_date">选择日期：</label>
+<form method="get" action="/winning" style="margin-bottom: 20px;">
+    <label for="selected_date" class="date-label">选择日期：</label>
     <input type="date" id="selected_date" name="date" value="{{ selected_date }}">
     <button type="submit">查询</button>
 </form>
 
 {% if results is not none %}
     {% if results %}
-    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; margin-top: 20px; font-size: 15px;">
-        <thead style="background: #f0f0f0;">
+    <table>
+        <thead>
             <tr>
                 {% if session.get('role') == 'admin' %}
-                    <th>代理</th>
+                <th>代理</th>
                 {% endif %}
                 <th>号码</th>
                 <th>类型</th>
@@ -31,96 +31,54 @@
             {% for row in results %}
             <tr>
                 {% if session.get('role') == 'admin' %}
-                    <td>{{ row.agent_id }}</td>
+                <td>{{ row.agent_id }}</td>
                 {% endif %}
                 <td>{{ row.number }}</td>
                 <td>{{ row.type }}</td>
-                <td>{{ row.markets }}</td>
-                <td>{{ row.dates }}</td>
+                <td>{{ row.market }}</td>
+                <td>{{ row.date }}</td>
                 <td>{{ "%.2f"|format(row.b) }}</td>
                 <td>{{ "%.2f"|format(row.s) }}</td>
                 <td>{{ "%.2f"|format(row.a) }}</td>
                 <td>{{ "%.2f"|format(row.c) }}</td>
-                <td style="font-weight: bold; color: green;">{{ "%.2f"|format(row.win_amount) }}</td>
+                <td class="amount">{{ "%.2f"|format(row.win_amount) }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-        <p style="margin-top: 20px;">⚠️ 当前所选日期暂无中奖记录。</p>
+    <p style="margin-top: 20px;">⚠️ 当前所选日期暂无中奖记录。</p>
     {% endif %}
 {% else %}
-    <p style="margin-top: 20px;">请先选择一个日期来查看中奖记录。</p>
+<p style="margin-top: 20px;">请先选择一个日期来查看中奖记录。</p>
 {% endif %}
+
 <style>
-table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 16px;
-}
-th, td {
-    border: 1px solid #aaa;
-    padding: 10px;
-    text-align: center;
-}
-th {
-    background-color: #f0f0f0;
-}
-tr:hover {
-    background-color: #f9f9f9;
-}
-.amount {
-    font-weight: bold;
-    color: green;
-}
-.date-label {
-    font-size: 18px;
-    margin: 10px 0;
-}
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+        margin-top: 10px;
+    }
+    th, td {
+        border: 1px solid #aaa;
+        padding: 10px;
+        text-align: center;
+    }
+    th {
+        background-color: #f0f0f0;
+    }
+    tr:hover {
+        background-color: #f9f9f9;
+    }
+    .amount {
+        font-weight: bold;
+        color: green;
+    }
+    .date-label {
+        font-size: 16px;
+        font-weight: bold;
+        margin-right: 10px;
+    }
 </style>
-
-<h2>🎉 中奖记录</h2>
-
-<form method="get" style="margin-bottom: 20px;">
-  <label class="date-label">选择日期：</label>
-  <input type="date" name="date" value="{{ request.args.get('date') }}">
-  <button type="submit">查询</button>
-</form>
-
-{% if results %}
-<table>
-  <thead>
-    <tr>
-      <th>代理</th>
-      <th>号码</th>
-      <th>类型</th>
-      <th>市场</th>
-      <th>日期</th>
-      <th>B</th>
-      <th>S</th>
-      <th>A</th>
-      <th>C</th>
-      <th>中奖金额 (RM)</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in results %}
-    <tr>
-      <td>{{ row.agent }}</td>
-      <td>{{ row.number }}</td>
-      <td>{{ row.type }}</td>
-      <td>{{ row.market }}</td>
-      <td>{{ row.date }}</td>
-      <td>{{ row.b }}</td>
-      <td>{{ row.s }}</td>
-      <td>{{ row.a }}</td>
-      <td>{{ row.c }}</td>
-      <td class="amount">{{ "%.2f"|format(row.amount) }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p>没有找到任何中奖记录。</p>
-{% endif %}
 {% endblock %}
