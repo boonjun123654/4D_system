@@ -188,13 +188,13 @@ def winning_view():
     username = session.get('username')
     selected_date = request.args.get('date')  # e.g., '2025-07-22'
 
-    # 默认值：results = None 表示页面初次打开还没选择日期
     results = None
 
     if selected_date:
-        # 加载开奖结果
         selected_dt = datetime.strptime(selected_date, "%Y-%m-%d").date()
         all_results = DrawResult4D.query.filter_by(date=selected_date).all()
+
+        # 构建开奖映射
         result_map = defaultdict(dict)
         for r in all_results:
             result_map[r.date.strftime("%Y-%m-%d")][r.market] = {
@@ -205,9 +205,9 @@ def winning_view():
                 "consolation": r.consolation.split(',') if r.consolation else []
             }
 
-        target_date = datetime.strptime(selected_date, "%Y-%m-%d").strftime("%d/%m")
+        target_date = selected_dt.strftime("%d/%m")
 
-        # 查询锁定下注
+        # 查询下注
         if role == 'admin':
             bets = FourDBet.query.filter(
                 FourDBet.status == 'locked',
@@ -221,17 +221,19 @@ def winning_view():
             ).all()
 
         results = []
+
         for bet in bets:
-            win_total = 0
             number = bet.number
             type_ = bet.type
             combo_numbers = get_box_combinations(number) if type_ in ['Box', 'IBox'] else [number]
-            date_key = selected_date  # already YYYY-MM-DD
+            date_key = selected_date  # 'YYYY-MM-DD'
 
             for market in bet.markets:
                 market_result = result_map.get(date_key, {}).get(market)
                 if not market_result:
                     continue
+
+                win_total = 0
 
                 for combo in combo_numbers:
                     for prize_name in ['1st', '2nd', '3rd']:
@@ -241,19 +243,19 @@ def winning_view():
                         if combo in market_result[prize_name]:
                             win_total += get_odds(market, prize_name, bet, type_)
 
-            if win_total > 0:
-                results.append({
-                    "agent_id": bet.agent_id,
-                    "number": number,
-                    "type": type_,
-                    "markets": ','.join(bet.markets),
-                    "dates": ','.join(bet.dates),
-                    "b": float(bet.b),
-                    "s": float(bet.s),
-                    "a": float(bet.a),
-                    "c": float(bet.c),
-                    "win_amount": round(win_total, 2)
-                })
+                if win_total > 0:
+                    results.append({
+                        "agent_id": bet.agent_id,
+                        "number": number,
+                        "type": type_,
+                        "market": market,  # ✅ 单个 market
+                        "date": target_date,
+                        "b": float(bet.b),
+                        "s": float(bet.s),
+                        "a": float(bet.a),
+                        "c": float(bet.c),
+                        "win_amount": round(win_total, 2)
+                    })
 
     return render_template("winning.html", results=results, selected_date=selected_date)
 
