@@ -186,42 +186,50 @@ def winning_view():
 
     role = session.get('role')
     username = session.get('username')
+    selected_date = request.args.get('date')  # e.g., '2025-07-22'
 
-    # 获取所有开奖结果（转为字典方便查询）
-    all_results = DrawResult4D.query.all()
-    result_map = defaultdict(dict)  # result_map[date][market] = {...}
-    for r in all_results:
-        result_map[r.date.strftime("%Y-%m-%d")][r.market] = {
-            "1st": r.first,
-            "2nd": r.second,
-            "3rd": r.third,
-            "special": r.special.split(',') if r.special else [],
-            "consolation": r.consolation.split(',') if r.consolation else []
-        }
+    # 默认值：results = None 表示页面初次打开还没选择日期
+    results = None
 
-    # 查询下注数据
-    if role == 'admin':
-        bets = FourDBet.query.filter_by(status='locked').all()
-    else:
-        bets = FourDBet.query.filter_by(status='locked', agent_id=username).all()
+    if selected_date:
+        # 加载开奖结果
+        all_results = DrawResult4D.query.filter_by(date=selected_date).all()
+        result_map = defaultdict(dict)
+        for r in all_results:
+            result_map[r.date.strftime("%Y-%m-%d")][r.market] = {
+                "1st": r.first,
+                "2nd": r.second,
+                "3rd": r.third,
+                "special": r.special.split(',') if r.special else [],
+                "consolation": r.consolation.split(',') if r.consolation else []
+            }
 
-    results = []
-    for bet in bets:
-        win_total = 0
-        number = bet.number
-        type_ = bet.type
-        combo_numbers = get_box_combinations(number) if type_ in ['Box', 'IBox'] else [number]
+        # 查询锁定下注
+        if role == 'admin':
+            bets = FourDBet.query.filter(
+                FourDBet.status == 'locked',
+                FourDBet.dates.any(datetime.strptime(selected_date, "%Y-%m-%d").strftime("%d/%m"))
+            ).all()
+        else:
+            bets = FourDBet.query.filter(
+                FourDBet.status == 'locked',
+                FourDBet.agent_id == username,
+                FourDBet.dates.any(datetime.strptime(selected_date, "%Y-%m-%d").strftime("%d/%m"))
+            ).all()
 
-        for date_str in bet.dates:
-            date_obj = datetime.strptime(date_str, "%d/%m").replace(year=datetime.now().year)
-            date_key = date_obj.strftime("%Y-%m-%d")
+        results = []
+        for bet in bets:
+            win_total = 0
+            number = bet.number
+            type_ = bet.type
+            combo_numbers = get_box_combinations(number) if type_ in ['Box', 'IBox'] else [number]
+            date_key = selected_date  # already YYYY-MM-DD
 
             for market in bet.markets:
                 market_result = result_map.get(date_key, {}).get(market)
                 if not market_result:
                     continue
 
-                # 对每个组合号码检查是否中奖
                 for combo in combo_numbers:
                     for prize_name in ['1st', '2nd', '3rd']:
                         if combo == market_result[prize_name]:
@@ -230,21 +238,21 @@ def winning_view():
                         if combo in market_result[prize_name]:
                             win_total += get_odds(market, prize_name, bet, type_)
 
-        if win_total > 0:
-            results.append({
-                "agent_id": bet.agent_id,
-                "number": number,
-                "type": type_,
-                "markets": ','.join(bet.markets),
-                "dates": ','.join(bet.dates),
-                "b": float(bet.b),
-                "s": float(bet.s),
-                "a": float(bet.a),
-                "c": float(bet.c),
-                "win_amount": round(win_total, 2)
-            })
+            if win_total > 0:
+                results.append({
+                    "agent_id": bet.agent_id,
+                    "number": number,
+                    "type": type_,
+                    "markets": ','.join(bet.markets),
+                    "dates": ','.join(bet.dates),
+                    "b": float(bet.b),
+                    "s": float(bet.s),
+                    "a": float(bet.a),
+                    "c": float(bet.c),
+                    "win_amount": round(win_total, 2)
+                })
 
-    return render_template("winning.html", results=results)
+    return render_template("winning.html", results=results, selected_date=selected_date)
 
 def get_box_combinations(number):
     if len(number) != 4 or not number.isdigit():
