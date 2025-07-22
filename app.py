@@ -204,17 +204,19 @@ def winning_view():
                 "consolation": r.consolation.split(',') if r.consolation else []
             }
 
+        target_date = datetime.strptime(selected_date, "%Y-%m-%d").strftime("%d/%m")
+
         # 查询锁定下注
         if role == 'admin':
             bets = FourDBet.query.filter(
                 FourDBet.status == 'locked',
-                FourDBet.dates.any(datetime.strptime(selected_date, "%Y-%m-%d").strftime("%d/%m"))
+                FourDBet.dates.any(target_date)
             ).all()
         else:
             bets = FourDBet.query.filter(
                 FourDBet.status == 'locked',
                 FourDBet.agent_id == username,
-                FourDBet.dates.any(datetime.strptime(selected_date, "%Y-%m-%d").strftime("%d/%m"))
+                FourDBet.dates.any(target_date)
             ).all()
 
         results = []
