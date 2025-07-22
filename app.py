@@ -193,7 +193,7 @@ def winning_view():
 
     if selected_date:
         # 加载开奖结果
-        selected_dt = datetime.strptime(selected_date, "%Y-%m-%d").date(
+        selected_dt = datetime.strptime(selected_date, "%Y-%m-%d").date()
         all_results = DrawResult4D.query.filter_by(date=selected_date).all()
         result_map = defaultdict(dict)
         for r in all_results:
