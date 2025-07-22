@@ -239,7 +239,7 @@ def winning_view():
                             win_total += get_odds(market, prize_name, bet, type_)
                     for prize_name in ['special', 'consolation']:
                         if combo in market_result[prize_name]:
-                            win_total += get_oddsmarket, prize_name, bet, type_)
+                            win_total += get_odds(market, prize_name, bet, type_)
 
             if win_total > 0:
                 results.append({
