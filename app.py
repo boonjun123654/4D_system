@@ -235,10 +235,14 @@ def winning_view():
                 for combo in combo_numbers:
                     for prize_name in ['1st', '2nd', '3rd']:
                         if combo == market_result[prize_name]:
-                            win_total += get_odds(market, prize_name, bet, type_)
+                            single_market_bet = copy.deepcopy(bet)
+                            single_market_bet.markets = [market]  # 只保留当前 market
+                            win_total += get_odds(market, prize_name, single_market_bet, type_)
                     for prize_name in ['special', 'consolation']:
                         if combo in market_result[prize_name]:
-                            win_total += get_odds(market, prize_name, bet, type_)
+                            single_market_bet = copy.deepcopy(bet)
+                            single_market_bet.markets = [market]  # 只保留当前 market
+                            win_total += get_odds(market, prize_name, single_market_bet, type_)
 
             if win_total > 0:
                 results.append({
@@ -265,13 +269,13 @@ def get_odds(market, prize_name, bet, type_):
     try:
         market_odds = odds[market]
         total = 0
-        if bet.b:
+        if float(bet.b) > 0 and "B" in market_odds:
             total += float(bet.b) * market_odds["B"].get(prize_name, 0)
-        if bet.s:
+        if float(bet.s) > 0 and "S" in market_odds:
             total += float(bet.s) * market_odds["S"].get(prize_name, 0)
-        if bet.a:
+        if float(bet.a) > 0 and "A" in market_odds:
             total += float(bet.a) * market_odds["A"].get(prize_name, 0)
-        if bet.c:
+        if float(bet.c) > 0 and "C" in market_odds:
             total += float(bet.c) * market_odds["C"].get(prize_name, 0)
         if type_ == "IBox":
             return total / len(get_box_combinations(bet.number))
