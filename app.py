@@ -237,11 +237,13 @@ def winning_view():
 
                 for combo in combo_numbers:
                     for prize_name in ['1st', '2nd', '3rd']:
-                        if combo == market_result[prize_name]:
+                        if is_number_match(market_result[prize_name], combo, type_, prize_name):
                             win_total += get_odds(market, prize_name, bet, type_)
+
                     for prize_name in ['special', 'consolation']:
-                        if combo in market_result[prize_name]:
-                            win_total += get_odds(market, prize_name, bet, type_)
+                        if type_ not in ["A", "C", "S"]:
+                            if any(is_number_match(p, combo, type_, prize_name) for p in market_result[prize_name]):
+                                win_total += get_odds(market, prize_name, bet, type_)
 
                 if win_total > 0:
                     results.append({
@@ -263,6 +265,16 @@ def get_box_combinations(number):
     if len(number) != 4 or not number.isdigit():
         return []
     return sorted(set([''.join(p) for p in permutations(number)]))
+
+def is_number_match(prize_number, bet_number, type_, prize_name):
+    if type_ == "A":
+        return prize_name == "1st" and prize_number[-3:] == bet_number[-3:]
+    elif type_ == "C":
+        return prize_name in ["1st", "2nd", "3rd"] and prize_number[-3:] == bet_number[-3:]
+    elif type_ == "S":
+        return prize_name in ["1st", "2nd", "3rd"] and prize_number == bet_number
+    else:  # B, Box, IBox
+        return prize_number == bet_number
 
 def get_odds(market, prize_name, bet, type_):
     try:
