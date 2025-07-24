@@ -238,7 +238,7 @@ def winning_view():
                 for combo in combo_numbers:
                     # 判断 A：只看 1st 尾三位
                     if float(bet.a) > 0 and market_result["1st"][-3:] == combo[-3:]:
-                       win_amt = float(bet.a) * odds[market]["A"].get("1st", 0)
+                        win_amt = float(bet.a) * odds[market]["A"].get("1st", 0)
                         db.session.add(WinningRecord4D(
                             bet_id=bet.id,
                             agent_id=bet.agent_id,
