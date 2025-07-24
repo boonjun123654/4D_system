@@ -236,33 +236,14 @@ def winning_view():
                 win_total = 0
 
                 for combo in combo_numbers:
-                    # A 类型判断：只看 1st 尾三位
-                    if float(bet.a) > 0 and market_result["1st"][-3:] == combo[-3:]:
-                        win_total += float(bet.a) * odds[market]["A"].get("1st", 0)
+                    for prize_name in ['1st', '2nd', '3rd']:
+                        if is_number_match(market_result[prize_name], combo, type_, prize_name):
+                            win_total += get_odds(market, prize_name, bet, type_)
 
-                    # C 类型判断：1st/2nd/3rd 尾三位
-                    if float(bet.c) > 0:
-                        for prize in ["1st", "2nd", "3rd"]:
-                            if market_result[prize][-3:] == combo[-3:]:
-                                win_total += float(bet.c) * odds[market]["C"].get(prize, 0)
-
-                    # S 类型判断：1st/2nd/3rd 全号码
-                    if float(bet.s) > 0:
-                        for prize in ["1st", "2nd", "3rd"]:
-                            if market_result[prize] == combo:
-                                win_total += float(bet.s) * odds[market]["S"].get(prize, 0)
-
-                    # B 类型判断：所有奖（含 special/consolation）全号码
-                    if float(bet.b) > 0:
-                        for prize in ["1st", "2nd", "3rd"]:
-                            if market_result[prize] == combo:
-                                win_total += float(bet.b) * odds[market]["B"].get(prize, 0)
-                        for prize in market_result.get("special", []):
-                            if prize == combo:
-                                win_total += float(bet.b) * odds[market]["B"].get("special", 0)
-                        for prize in market_result.get("consolation", []):
-                            if prize == combo:
-                                win_total += float(bet.b) * odds[market]["B"].get("consolation", 0)
+                    for prize_name in ['special', 'consolation']:
+                        if type_ not in ["A", "C", "S"]:
+                            if any(is_number_match(p, combo, type_, prize_name) for p in market_result[prize_name]):
+                                win_total += get_odds(market, prize_name, bet, type_)
 
                 if win_total > 0:
                     results.append({
