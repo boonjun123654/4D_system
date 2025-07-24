@@ -452,6 +452,17 @@ def report():
         }
     }
 
+    # 查询中奖记录表（根据 draw_date）
+    all_wins = WinningRecord4D.query.filter(
+        WinningRecord4D.draw_date >= start_date.date(),
+        WinningRecord4D.draw_date <= end_date.date()
+    ).all()
+
+    # 计算每个代理的中奖金额
+    win_amount_map = defaultdict(lambda: Decimal("0.00"))
+    for w in all_wins:
+        win_amount_map[w.agent_id] += Decimal(str(w.win_amount or "0.00"))
+
     report_data = defaultdict(lambda: {
         "username": "",
         "sales": Decimal("0.00"),
