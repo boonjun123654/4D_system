@@ -342,21 +342,21 @@ def winning_view():
                                 ))
                                 win_total += win_amt
 
-                if win_total > 0:
-                    results.append({
-                        "agent_id": bet.agent_id,
-                        "number": number,
-                        "type": type_,
-                        "market": market,  # ✅ 单个 market
-                        "date": target_date,
-                        "b": float(bet.b),
-                        "s": float(bet.s),
-                        "a": float(bet.a),
-                        "c": float(bet.c),
-                        "win_amount": round(win_total, 2)
-                    })
+                            if win_total > 0:
+                                    results.append({
+                                        "agent_id": bet.agent_id,
+                                        "number": number,
+                                        "type": type_,
+                                        "market": market,  # ✅ 单个 market
+                                        "date": target_date,
+                                        "b": float(bet.b),
+                                        "s": float(bet.s),
+                                        "a": float(bet.a),
+                                        "c": float(bet.c),
+                                        "win_amount": round(win_total, 2)
+                                    })
 
-    return render_template("winning.html", results=results, selected_date=selected_date)
+                    return render_template("winning.html", results=results, selected_date=selected_date)
 
 def get_box_combinations(number):
     if len(number) != 4 or not number.isdigit():
