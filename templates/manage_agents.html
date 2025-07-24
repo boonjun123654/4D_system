@@ -23,6 +23,11 @@
     </div>
 </form>
 
+<form method="post" action="/admin/process_winning">
+    <input type="date" name="date" required>
+    <button type="submit">手动处理中奖记录</button>
+</form>
+
 <form method="post" action="/admin/lock_bets" onsubmit="return confirm('确认要锁定今日所有注单？');" style="margin-bottom: 20px;">
     <button type="submit" style="padding: 8px 20px; background-color: #ff8800; color: white; border: none; border-radius: 6px; font-size: 15px;">
         🔒 手动锁注（今日）
