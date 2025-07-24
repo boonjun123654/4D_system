@@ -5,7 +5,7 @@ from odds_config import odds
 from datetime import datetime, timedelta,time
 from utils import calculate_payout
 from sqlalchemy import func,any_
-from models import db, FourDBet, Agent4D,DrawResult4D  
+from models import db, FourDBet, Agent4D,DrawResult4D,WinningRecord4D
 from collections import defaultdict
 from itertools import permutations
 from functools import wraps
