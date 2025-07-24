@@ -37,19 +37,3 @@ class DrawResult4D(db.Model):
     third = db.Column(db.String(4))
     special = db.Column(db.String(100))
     consolation = db.Column(db.String(100))
-
-class WinningRecord4D(db.Model):
-    __tablename__ = 'winning_record_4d'
-
-    id = db.Column(db.Integer, primary_key=True)
-    bet_id = db.Column(db.Integer, db.ForeignKey('4DBet.id', ondelete='CASCADE'), nullable=False)
-    agent_id = db.Column(db.String(50), nullable=False)
-    number = db.Column(db.String(4), nullable=False)
-    market = db.Column(db.String(10), nullable=False)
-    draw_date = db.Column(db.Date, nullable=False)
-    prize_type = db.Column(db.String(20), nullable=False)  # 1st / 2nd / 3rd / special / consolation
-    bet_mode = db.Column(db.String(10), nullable=False)    # 正字 / Box / IBox
-    bet_type = db.Column(db.String(10), nullable=False)    # A / B / C / S
-    amount = db.Column(db.Numeric(10, 2), nullable=False)  # 对应下注金额
-    win_amount = db.Column(db.Numeric(10, 2), nullable=False)  # 对应中奖金额
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
