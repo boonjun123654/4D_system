@@ -238,36 +238,109 @@ def winning_view():
                 for combo in combo_numbers:
                     # 判断 A：只看 1st 尾三位
                     if float(bet.a) > 0 and market_result["1st"][-3:] == combo[-3:]:
-                        win_total += float(bet.a) * odds[market]["A"].get("1st", 0)
+                       win_amt = float(bet.a) * odds[market]["A"].get("1st", 0)
+                        db.session.add(WinningRecord4D(
+                            bet_id=bet.id,
+                            agent_id=bet.agent_id,
+                            number=number,
+                            market=market,
+                            draw_date=selected_dt,
+                            prize_type="1st",
+                            bet_mode=type_,
+                            bet_type="A",
+                            amount=bet.a,
+                            win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
+                        ))
+                        win_total += win_amt
 
                     # 判断 C：1st/2nd/3rd 尾三位
                     if float(bet.c) > 0:
                         for prize in ["1st", "2nd", "3rd"]:
                             if market_result[prize][-3:] == combo[-3:]:
-                                win_total += float(bet.c) * odds[market]["C"].get(prize, 0)
+                                win_amt = float(bet.c) * odds[market]["C"].get(prize, 0)
+                                db.session.add(WinningRecord4D(
+                                    bet_id=bet.id,
+                                    agent_id=bet.agent_id,
+                                    number=number,
+                                    market=market,
+                                    draw_date=selected_dt,
+                                    prize_type=prize,
+                                    bet_mode=type_,
+                                    bet_type="C",
+                                    amount=bet.c,
+                                    win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
+                                ))
+                                win_total += win_amt
 
                     # 判断 S：1st/2nd/3rd 全号码
                     if float(bet.s) > 0:
                         for prize in ["1st", "2nd", "3rd"]:
                             if market_result[prize] == combo:
-                                win_total += float(bet.s) * odds[market]["S"].get(prize, 0)
+                                win_amt = float(bet.s) * odds[market]["S"].get(prize, 0)
+                                db.session.add(WinningRecord4D(
+                                    bet_id=bet.id,
+                                    agent_id=bet.agent_id,
+                                    number=number,
+                                    market=market,
+                                    draw_date=selected_dt,
+                                    prize_type=prize,
+                                    bet_mode=type_,
+                                    bet_type="S",
+                                    amount=bet.s,
+                                    win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
+                                ))
+                                win_total += win_amt
 
                     # 判断 B：所有奖项（含 special, consolation）全号码
                     if float(bet.b) > 0:
                         for prize in ["1st", "2nd", "3rd"]:
                             if market_result[prize] == combo:
-                                win_total += float(bet.b) * odds[market]["B"].get(prize, 0)
+                                win_amt = float(bet.b) * odds[market]["B"].get(prize, 0)
+                                db.session.add(WinningRecord4D(
+                                    bet_id=bet.id,
+                                   agent_id=bet.agent_id,
+                                    number=number,
+                                    market=market,
+                                    draw_date=selected_dt,
+                                    prize_type=prize,
+                                    bet_mode=type_,
+                                    bet_type="B",
+                                    amount=bet.b,
+                                    win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
+                                ))
+                                win_total += win_amt
                         for prize in market_result.get("special", []):
                             if prize == combo:
-                                win_total += float(bet.b) * odds[market]["B"].get("special", 0)
-                        for prize in market_result.get("consolation", []):
+                                win_amt = float(bet.b) * odds[market]["B"].get("special", 0)
+                                db.session.add(WinningRecord4D(
+                                    bet_id=bet.id,
+                                    agent_id=bet.agent_id,
+                                    number=number,
+                                    market=market,
+                                    draw_date=selected_dt,
+                                    prize_type="special",
+                                    bet_mode=type_,
+                                    bet_type="B",
+                                    amount=bet.b,
+                                    win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
+                                ))
+                                win_total += win_amt
+                       for prize in market_result.get("consolation", []):
                             if prize == combo:
-                                win_total += float(bet.b) * odds[market]["B"].get("consolation", 0)
-
-                # 如果是 IBox 模式，奖金需要除以组合数
-                if type_ == 'IBox' and len(combo_numbers) > 0:
-                    win_total = win_total / len(combo_numbers)
-
+                                win_amt = float(bet.b) * odds[market]["B"].get("consolation", 0)
+                                db.session.add(WinningRecord4D(
+                                    bet_id=bet.id,
+                                    agent_id=bet.agent_id,
+                                    number=number,
+                                    market=market,
+                                    draw_date=selected_dt,
+                                    prize_type="consolation",
+                                    bet_mode=type_,
+                                    bet_type="B",
+                                    amount=bet.b,
+                                   win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
+                                ))
+                                win_total += win_amt
 
                 if win_total > 0:
                     results.append({
