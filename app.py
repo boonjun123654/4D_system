@@ -264,6 +264,11 @@ def winning_view():
                             if prize == combo:
                                 win_total += float(bet.b) * odds[market]["B"].get("consolation", 0)
 
+                # 如果是 IBox 模式，奖金需要除以组合数
+                if type_ == 'IBox' and len(combo_numbers) > 0:
+                    win_total = win_total / len(combo_numbers)
+
+
                 if win_total > 0:
                     results.append({
                         "agent_id": bet.agent_id,
