@@ -309,6 +309,7 @@ def winning_view():
                                     win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
                                 ))
                                 win_total += win_amt
+
                         for prize in market_result.get("special", []):
                             if prize == combo:
                                 win_amt = float(bet.b) * odds[market]["B"].get("special", 0)
@@ -325,7 +326,7 @@ def winning_view():
                                     win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
                                 ))
                                 win_total += win_amt
-                       for prize in market_result.get("consolation", []):
+                        for prize in market_result.get("consolation", []):
                             if prize == combo:
                                 win_amt = float(bet.b) * odds[market]["B"].get("consolation", 0)
                                 db.session.add(WinningRecord4D(
@@ -338,7 +339,7 @@ def winning_view():
                                     bet_mode=type_,
                                     bet_type="B",
                                     amount=bet.b,
-                                   win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
+                                    win_amount=win_amt if type_ != 'IBox' else win_amt / len(combo_numbers)
                                 ))
                                 win_total += win_amt
 
