@@ -224,8 +224,7 @@ def winning_view():
 
         for bet in bets:
             number = bet.number
-            type_ = bet.type
-            combo_numbers = get_box_combinations(number) if type_ in ['Box', 'IBox'] else [number]
+            base_combos = get_box_combinations(number) if bet.type in ['Box', 'IBox'] else [number]
             date_key = selected_date  # 'YYYY-MM-DD'
 
             for market in bet.markets:
@@ -235,13 +234,24 @@ def winning_view():
 
                 win_total = 0
 
-                for combo in combo_numbers:
+                for bet_type in ["B", "S", "A", "C"]:
+                    # 是否有该类型下注
+                    if bet_type == "B" and float(bet.b) == 0:
+                        continue
+                    if bet_type == "S" and float(bet.s) == 0:
+                        continue
+                    if bet_type == "A" and float(bet.a) == 0:
+                        continue
+                    if bet_type == "C" and float(bet.c) == 0:
+                        continue
+
+                for combo in base_combos:
                     for prize_name in ['1st', '2nd', '3rd']:
                         if is_number_match(market_result[prize_name], combo, type_, prize_name):
                             win_total += get_odds(market, prize_name, bet, type_)
-
-                    for prize_name in ['special', 'consolation']:
-                        if type_ not in ["A", "C", "S"]:
+                    
+                    if bet_type == "B":
+                        for prize_name in ['special', 'consolation']:
                             if any(is_number_match(p, combo, type_, prize_name) for p in market_result[prize_name]):
                                 win_total += get_odds(market, prize_name, bet, type_)
 
@@ -249,7 +259,7 @@ def winning_view():
                     results.append({
                         "agent_id": bet.agent_id,
                         "number": number,
-                        "type": type_,
+                        "type": bet.type,
                         "market": market,  # ✅ 单个 market
                         "date": target_date,
                         "b": float(bet.b),
