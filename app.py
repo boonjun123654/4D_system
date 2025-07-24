@@ -489,7 +489,7 @@ def report():
         report_data[r.agent_id]["username"] = r.agent_id
         report_data[r.agent_id]["sales"] += r.total
         report_data[r.agent_id]["commission"] += commission_total
-        report_data[r.agent_id]["win_amount"] = Decimal("0.00")  # 固定为 0
+        report_data[r.agent_id]["win_amount"] = win_amount_map.get(r.agent_id, Decimal("0.00"))
         report_data[r.agent_id]["net"] = (
             report_data[r.agent_id]["sales"]
             - report_data[r.agent_id]["commission"]
