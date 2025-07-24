@@ -247,13 +247,13 @@ def winning_view():
 
                 for combo in base_combos:
                     for prize_name in ['1st', '2nd', '3rd']:
-                        if is_number_match(market_result[prize_name], combo, type_, prize_name):
-                            win_total += get_odds(market, prize_name, bet, type_)
+                        if is_number_match(market_result[prize_name], combo, bet_type, prize_name):
+                            win_total += get_odds(market, prize_name, bet, bet_type)
                     
                     if bet_type == "B":
                         for prize_name in ['special', 'consolation']:
-                            if any(is_number_match(p, combo, type_, prize_name) for p in market_result[prize_name]):
-                                win_total += get_odds(market, prize_name, bet, type_)
+                            if any(is_number_match(p, combo, bet_type, prize_name) for p in market_result[prize_name]):
+                                win_total += get_odds(market, prize_name, bet, bet_type)
 
                 if win_total > 0:
                     results.append({
@@ -276,17 +276,17 @@ def get_box_combinations(number):
         return []
     return sorted(set([''.join(p) for p in permutations(number)]))
 
-def is_number_match(prize_number, bet_number, type_, prize_name):
-    if type_ == "A":
+def is_number_match(prize_number, bet_number, bet_type, prize_name):
+    if bet_type == "A":
         return prize_name == "1st" and prize_number[-3:] == bet_number[-3:]
-    elif type_ == "C":
+    elif bet_type == "C":
         return prize_name in ["1st", "2nd", "3rd"] and prize_number[-3:] == bet_number[-3:]
-    elif type_ == "S":
+    elif bet_type== "S":
         return prize_name in ["1st", "2nd", "3rd"] and prize_number == bet_number
     else:  # B, Box, IBox
         return prize_number == bet_number
 
-def get_odds(market, prize_name, bet, type_):
+def get_odds(market, prize_name, bet, bet_type):
     try:
         market_odds = odds[market]
         total = 0
@@ -298,7 +298,7 @@ def get_odds(market, prize_name, bet, type_):
             total += float(bet.a) * market_odds["A"].get(prize_name, 0)
         if float(bet.c) > 0 and "C" in market_odds:
             total += float(bet.c) * market_odds["C"].get(prize_name, 0)
-        if type_ == "IBox":
+        if bet_type == "IBox":
             return total / len(get_box_combinations(bet.number))
         return total
     except:
