@@ -4,6 +4,7 @@
 <h2 style="margin-top: 20px;">🧾 查单记录</h2>
 
 <form method="get" action="/history" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center;">
+    {{ csrf_token() }}
     <div>
         <label><strong>日期范围：</strong></label><br>
         <input type="date" name="start_date" value="{{ start_date }}" style="padding: 6px;">
