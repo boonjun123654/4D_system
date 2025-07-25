@@ -22,7 +22,7 @@
             <label for="captcha" style="display:block; margin-bottom: 6px; font-weight: bold;">验证码：</label>
             <input type="text" id="captcha" name="captcha" required
                    style="width: 60%; padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px;">
-            <img src="/captcha?{{ random() }}" onclick="this.src='/captcha?'+Math.random()" title="点击刷新验证码"
+            <img src="/captcha" onclick="this.src='/captcha?' + Math.random()" title="点击刷新验证码">
                  style="height: 42px; vertical-align: middle; cursor: pointer; margin-left: 10px;">
         </div>
         {% endif %}
