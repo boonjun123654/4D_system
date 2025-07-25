@@ -5,7 +5,6 @@
     <h2 style="text-align: center; margin-bottom: 25px; color: #333;">登录账户</h2>
 
     <form method="POST" action="/login">
-        {{ csrf_token() }}
         <div style="margin-bottom: 20px;">
             <label for="username" style="display:block; margin-bottom: 6px; font-weight: bold;">用户名：</label>
             <input type="text" id="username" name="username" required
