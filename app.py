@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, flash, session,json
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from odds_config import odds
+from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, timedelta,time
 from utils import calculate_payout
 from sqlalchemy import func,any_
@@ -25,6 +26,7 @@ app.secret_key = os.environ.get("SECRET_KEY")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = 'your-secret-key'
+csrf = CSRFProtect(app)
 
 login_attempts = {}
 
