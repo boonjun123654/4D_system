@@ -3,6 +3,7 @@
 <h2>OCR 上传 4D 开奖图像</h2>
 
 <form method="POST" enctype="multipart/form-data">
+    {{ csrf_token() }}
     <input type="file" name="image" accept="image/*" required>
     <button type="submit">上传识别</button>
 </form>
