@@ -7,3 +7,4 @@ Pillow
 pytz
 apscheduler
 captcha
+Flask-WTF>=1.1.1
