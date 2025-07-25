@@ -3,6 +3,7 @@
 <h2>🎉 中奖记录</h2>
 
 <form method="get" action="/winning" style="margin-bottom: 20px;">
+    {{ csrf_token() }}
     <label for="selected_date" class="date-label">选择日期：</label>
     <input type="date" id="selected_date" name="date" value="{{ selected_date }}">
     <button type="submit">查询</button>
