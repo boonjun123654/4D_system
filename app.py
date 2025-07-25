@@ -8,7 +8,7 @@ from sqlalchemy import func,any_
 from models import db, FourDBet, Agent4D,DrawResult4D,WinningRecord4D,LoginAttempt
 from collections import defaultdict
 from itertools import permutations
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash,check_password_hash
 from functools import wraps
 from decimal import Decimal
 import pytesseract
@@ -679,8 +679,8 @@ def login():
             session.pop("captcha_code", None)
             return redirect('/')
 
-        agent = Agent4D.query.filter_by(username=username, password=password).first()
-        if agent:
+        agent = Agent4D.query.filter_by(username=username).first()
+        if agent and check_password_hash(agent.password, password):
             session['username'] = agent.username
             session['role'] = 'agent'
             if attempt:
