@@ -3,8 +3,6 @@
 <h2>下注页面</h2>
 
 <form method="post" onsubmit="return handleBet();">
-    {{ csrf_token() }}
-
     {% if session.get('role') == 'admin' %}
     <div style="margin: 20px 0; display: flex; align-items: center; gap: 10px;">
         <label for="agent_id" style="font-weight: bold; font-size: 16px;">选择代理用户：</label>
