@@ -4,7 +4,6 @@
 <h2 style="margin-top: 20px;">📊 财务报表</h2>
 
 <form method="get" action="/report" style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
-    {{ csrf_token() }}
     <label for="start_date" style="font-weight: bold;">日期范围：</label>
     <input type="date" id="start_date" name="start_date" value="{{ start_date }}" style="padding: 5px;">
     <input type="date" id="end_date" name="end_date" value="{{ end_date }}" style="padding: 5px;">
