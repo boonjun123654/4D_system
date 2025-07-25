@@ -3,6 +3,7 @@
 
 <h2 style="margin-top: 20px;">➕ 创建新代理</h2>
 <form method="post" action="/admin/agents" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-bottom: 30px;">
+    {{ csrf_token() }}
     <div>
         <label><strong>User ID:</strong></label><br>
         <input type="text" name="username" required style="padding: 6px; width: 150px;">
