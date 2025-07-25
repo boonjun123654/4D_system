@@ -22,6 +22,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = 'your-secret-key'
 
+login_attempts = {}
+
+MAX_ATTEMPTS = 5
+LOCKOUT_MINUTES = 10
+
 db.init_app(app)
 with app.app_context():
     db.create_all()
@@ -623,6 +628,21 @@ def delete_agent(agent_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    ip = request.remote_addr
+    now = datetime.now()
+
+    # 判断是否封锁中
+    if ip in login_attempts:
+        attempt_info = login_attempts[ip]
+        if attempt_info["count"] >= MAX_ATTEMPTS:
+            elapsed = now - attempt_info["last_attempt"]
+            if elapsed < timedelta(minutes=LOCKOUT_MINUTES):
+                flash(f"⚠️ 登录次数过多，请稍后再试（{LOCKOUT_MINUTES}分钟）")
+                return render_template('login.html')
+            else:
+                # 解锁：重置失败次数
+                login_attempts[ip] = {"count": 0, "last_attempt": now}
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -633,14 +653,28 @@ def login():
         if username == admin_user and password == admin_pass:
             session['username'] = admin_user
             session['role'] = 'admin'
+            login_attempts.pop(ip, None)  # ✅ 登录成功清除失败记录
             return redirect('/')
 
         agent = Agent4D.query.filter_by(username=username, password=password).first()
         if agent:
             session['username'] = agent.username
             session['role'] = 'agent'
+            login_attempts.pop(ip, None)  # ✅ 登录成功清除失败记录
             return redirect('/')
-        flash("❌ 登录失败，请检查用户名或密码")
+
+        # ❌ 登录失败：记录失败次数
+        if ip not in login_attempts:
+            login_attempts[ip] = {"count": 1, "last_attempt": now}
+        else:
+            login_attempts[ip]["count"] += 1
+            login_attempts[ip]["last_attempt"] = now
+
+        remain = MAX_ATTEMPTS - login_attempts[ip]["count"]
+        if remain <= 0:
+            flash(f"❌ 登录失败次数过多，请等待 {LOCKOUT_MINUTES} 分钟")
+        else:
+            flash(f"❌ 登录失败，还有 {remain} 次机会")
 
     return render_template('login.html')
 
