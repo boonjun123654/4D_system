@@ -54,3 +54,12 @@ class WinningRecord4D(db.Model):
     win_amount = db.Column(db.Numeric(10, 2), nullable=False)  # 对应中奖金额
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
+class LoginAttempt(db.Model):
+    __tablename__ = 'login_attempts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), nullable=False)
+    ip_address = db.Column(db.String(50))
+    attempt_count = db.Column(db.Integer, default=0)
+    last_attempt = db.Column(db.DateTime, default=datetime.utcnow)
+    locked_until = db.Column(db.DateTime, nullable=True)
