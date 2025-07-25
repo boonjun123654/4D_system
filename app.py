@@ -8,6 +8,7 @@ from sqlalchemy import func,any_
 from models import db, FourDBet, Agent4D,DrawResult4D,WinningRecord4D,LoginAttempt
 from collections import defaultdict
 from itertools import permutations
+from werkzeug.security import generate_password_hash
 from functools import wraps
 from decimal import Decimal
 import pytesseract
@@ -597,16 +598,15 @@ def manage_agents():
             if existing:
                 return redirect('/admin/agents?error=exists')
             else:
+                hashed_password = generate_password_hash(password)
                 agent = Agent4D(
                     username=username,
-                    password=password,
+                    password=hashed_password,
                     commission_group=commission_group  # 修改点：保存为 A/B
                 )
                 db.session.add(agent)
                 db.session.commit()
                 return redirect(f'/admin/agents?success={username}')
-
-        return redirect('/admin/agents')
 
     agents = Agent4D.query.all()
     return render_template('manage_agents.html', agents=agents)
