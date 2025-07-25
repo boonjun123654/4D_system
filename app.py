@@ -658,13 +658,13 @@ def login():
         # 如果已经封锁
         if attempt and attempt.locked_until and now < attempt.locked_until:
             flash(f"⚠️ 登录次数过多，请稍后再试（{LOCKOUT_MINUTES}分钟）")
-            return render_template('login.html')
+            return render_template('login.html', show_captcha=True, random=random)
 
         # 若失败次数 ≥ 3，要求验证验证码
         if attempt and attempt.attempt_count >= CAPTCHA_THRESHOLD:
             if not captcha_input or captcha_input.lower() != session.get("captcha_code", "").lower():
                 flash("❌ 验证码错误")
-                return render_template('login.html', show_captcha=True)
+                return render_template('login.html', show_captcha=True, random=random)
 
         # 登录成功处理
         admin_user = os.getenv('ADMIN_USER')
