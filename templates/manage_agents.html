@@ -3,7 +3,6 @@
 
 <h2 style="margin-top: 20px;">➕ 创建新代理</h2>
 <form method="post" action="/admin/agents" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-bottom: 30px;">
-    {{ csrf_token() }}
     <div>
         <label><strong>User ID:</strong></label><br>
         <input type="text" name="username" required style="padding: 6px; width: 150px;">
@@ -25,7 +24,6 @@
 </form>
 
 <form method="post" action="/admin/process_winning" style="margin-bottom: 20px;">
-    {{ csrf_token() }}
     <input type="date" name="date" required style="padding: 6px 10px; font-size: 15px;">
     <button type="submit" style="padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 6px; font-size: 15px;">
         🧮 手动处理中奖记录
@@ -33,7 +31,6 @@
 </form>
 
 <form method="post" action="/admin/lock_bets" onsubmit="return confirm('确认要锁定今日所有注单？');" style="margin-bottom: 20px;">
-    {{ csrf_token() }}
     <button type="submit" style="padding: 8px 20px; background-color: #ff8800; color: white; border: none; border-radius: 6px; font-size: 15px;">
         🔒 手动锁注（今日）
     </button>
@@ -57,14 +54,12 @@
             <td>Ground {{ agent.commission_group }}</td>
             <td style="text-align: center;">
                 <form method="post" action="/admin/agents/{{ agent.id }}/update_password" style="display: inline-flex; gap: 6px;">
-                    {{ csrf_token() }}
                     <input type="text" name="new_password" placeholder="新密码" style="padding: 5px;">
                     <button type="submit" style="padding: 6px 12px;">修改密码</button>
                 </form>
             </td>
             <td style="text-align: center;">
                 <form method="post" action="/admin/agents/{{ agent.id }}/delete" onsubmit="return confirm('确认删除此代理？');" style="display:inline;">
-                    {{ csrf_token() }}
                     <button type="submit" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px;">
                         删除
                     </button>
