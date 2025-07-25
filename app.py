@@ -14,6 +14,9 @@ import pytesseract
 from pytz import timezone
 from PIL import Image
 from werkzeug.utils import secure_filename
+from captcha.image import ImageCaptcha
+import random
+import string
 import os
 
 app = Flask(__name__)
@@ -66,6 +69,16 @@ def admin_lock_bets():
     with app.app_context():
         lock_today_bets()
     return redirect('/admin/agents?locked=1')
+
+@app.route('/captcha')
+def generate_captcha():
+    import random, string
+    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+    session['captcha_code'] = code  # 存入 session
+
+    image = ImageCaptcha()
+    data = image.generate(code)
+    return send_file(data, mimetype='image/png')
 
 @app.route('/bet', methods=['GET', 'POST'])
 @login_required
@@ -630,10 +643,14 @@ def delete_agent(agent_id):
 def login():
     ip = request.remote_addr
     now = datetime.utcnow()
+    MAX_ATTEMPTS = 5
+    CAPTCHA_THRESHOLD = 3  # 第 3 次失败后要求验证码
+    LOCKOUT_MINUTES = 10
 
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        captcha_input = request.form.get('captcha')
 
         # 从数据库中查找登录尝试记录
         attempt = LoginAttempt.query.filter_by(username=username).first()
@@ -642,6 +659,12 @@ def login():
         if attempt and attempt.locked_until and now < attempt.locked_until:
             flash(f"⚠️ 登录次数过多，请稍后再试（{LOCKOUT_MINUTES}分钟）")
             return render_template('login.html')
+
+        # 若失败次数 ≥ 3，要求验证验证码
+        if attempt and attempt.attempt_count >= CAPTCHA_THRESHOLD:
+            if not captcha_input or captcha_input.lower() != session.get("captcha_code", "").lower():
+                flash("❌ 验证码错误")
+                return render_template('login.html', show_captcha=True)
 
         # 登录成功处理
         admin_user = os.getenv('ADMIN_USER')
@@ -653,6 +676,7 @@ def login():
             if attempt:
                 db.session.delete(attempt)
                 db.session.commit()
+            session.pop("captcha_code", None)
             return redirect('/')
 
         agent = Agent4D.query.filter_by(username=username, password=password).first()
@@ -662,6 +686,7 @@ def login():
             if attempt:
                 db.session.delete(attempt)
                 db.session.commit()
+            session.pop("captcha_code", None)
             return redirect('/')
 
         # 登录失败处理
@@ -684,11 +709,20 @@ def login():
         # 给出提示信息
         remain = MAX_ATTEMPTS - attempt.attempt_count
         if remain <= 0:
-            flash(f"❌ 登录失败次数过多，请等待 {LOCKOUT_MINUTES} 分钟")
+            flash(f"登录失败次数过多，请等待 {LOCKOUT_MINUTES} 分钟")
         else:
-            flash(f"❌ 登录失败，还有 {remain} 次机会")
+            flash(f"登录失败，还有 {remain} 次机会")
 
-    return render_template('login.html')
+        show_captcha = attempt.attempt_count >= CAPTCHA_THRESHOLD
+        return render_template('login.html', show_captcha=show_captcha)
+
+    # GET 请求，检查是否需要显示验证码
+    attempt = None
+    username = request.args.get('username')
+    if username:
+        attempt = LoginAttempt.query.filter_by(username=username).first()
+    show_captcha = attempt and attempt.attempt_count >= CAPTCHA_THRESHOLD
+    return render_template('login.html', show_captcha=show_captcha)
 
 @app.route('/logout')
 def logout():
