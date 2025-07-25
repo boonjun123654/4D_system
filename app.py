@@ -15,7 +15,7 @@ from pytz import timezone
 from PIL import Image
 from werkzeug.utils import secure_filename
 from captcha.image import ImageCaptcha
-import random
+from random import random
 import string
 import os
 
