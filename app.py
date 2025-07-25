@@ -5,7 +5,7 @@ from odds_config import odds
 from datetime import datetime, timedelta,time
 from utils import calculate_payout
 from sqlalchemy import func,any_
-from models import db, FourDBet, Agent4D,DrawResult4D,WinningRecord4D
+from models import db, FourDBet, Agent4D,DrawResult4D,WinningRecord4D,LoginAttempt
 from collections import defaultdict
 from itertools import permutations
 from functools import wraps
@@ -629,48 +629,60 @@ def delete_agent(agent_id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     ip = request.remote_addr
-    now = datetime.now()
-
-    # 判断是否封锁中
-    if ip in login_attempts:
-        attempt_info = login_attempts[ip]
-        if attempt_info["count"] >= MAX_ATTEMPTS:
-            elapsed = now - attempt_info["last_attempt"]
-            if elapsed < timedelta(minutes=LOCKOUT_MINUTES):
-                flash(f"⚠️ 登录次数过多，请稍后再试（{LOCKOUT_MINUTES}分钟）")
-                return render_template('login.html')
-            else:
-                # 解锁：重置失败次数
-                login_attempts[ip] = {"count": 0, "last_attempt": now}
+    now = datetime.utcnow()
 
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
 
+        # 从数据库中查找登录尝试记录
+        attempt = LoginAttempt.query.filter_by(username=username).first()
+
+        # 如果已经封锁
+        if attempt and attempt.locked_until and now < attempt.locked_until:
+            flash(f"⚠️ 登录次数过多，请稍后再试（{LOCKOUT_MINUTES}分钟）")
+            return render_template('login.html')
+
+        # 登录成功处理
         admin_user = os.getenv('ADMIN_USER')
         admin_pass = os.getenv('ADMIN_PASS')
 
         if username == admin_user and password == admin_pass:
             session['username'] = admin_user
             session['role'] = 'admin'
-            login_attempts.pop(ip, None)  # ✅ 登录成功清除失败记录
+            if attempt:
+                db.session.delete(attempt)
+                db.session.commit()
             return redirect('/')
 
         agent = Agent4D.query.filter_by(username=username, password=password).first()
         if agent:
             session['username'] = agent.username
             session['role'] = 'agent'
-            login_attempts.pop(ip, None)  # ✅ 登录成功清除失败记录
+            if attempt:
+                db.session.delete(attempt)
+                db.session.commit()
             return redirect('/')
 
-        # ❌ 登录失败：记录失败次数
-        if ip not in login_attempts:
-            login_attempts[ip] = {"count": 1, "last_attempt": now}
+        # 登录失败处理
+        if not attempt:
+            attempt = LoginAttempt(
+                username=username,
+                ip_address=ip,
+                attempt_count=1,
+                last_attempt=now
+            )
+            db.session.add(attempt)
         else:
-            login_attempts[ip]["count"] += 1
-            login_attempts[ip]["last_attempt"] = now
+            attempt.attempt_count += 1
+            attempt.last_attempt = now
+            if attempt.attempt_count >= MAX_ATTEMPTS:
+                attempt.locked_until = now + timedelta(minutes=LOCKOUT_MINUTES)
 
-        remain = MAX_ATTEMPTS - login_attempts[ip]["count"]
+        db.session.commit()
+
+        # 给出提示信息
+        remain = MAX_ATTEMPTS - attempt.attempt_count
         if remain <= 0:
             flash(f"❌ 登录失败次数过多，请等待 {LOCKOUT_MINUTES} 分钟")
         else:
