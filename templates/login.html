@@ -10,188 +10,166 @@
     font-family: "Segoe UI", Roboto, sans-serif;
   }
 
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
   .login-box {
-    max-width: 380px;
-    margin: 100px auto;
-    background: rgba(0, 0, 0, 0.65);
-    padding: 40px 30px;
+    width: 100%;
+    max-width: 420px;
+    background: rgba(0, 0, 0, 0.7);
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    padding: 30px 24px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
     color: #fff;
   }
 
-  .login-box h2 {
+  .login-title {
     text-align: center;
     margin-bottom: 30px;
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
   }
 
-  .user-box {
+  .form-group {
     position: relative;
-    margin-bottom: 30px;
+    margin-bottom: 28px;
   }
 
-  .user-box input {
+  .form-group input {
     width: 100%;
-    padding: 12px 10px;
-    font-size: 16px;
-    color: #fff;
+    padding: 14px 10px 14px 10px;
     background: transparent;
     border: none;
-    border-bottom: 2px solid #fff;
+    border-bottom: 2px solid #ccc;
+    font-size: 16px;
+    color: #fff;
     outline: none;
   }
 
-  .user-box label {
+  .form-group label {
     position: absolute;
-    top: 12px;
     left: 10px;
+    top: 14px;
     color: #ccc;
     font-size: 14px;
     pointer-events: none;
     transition: 0.3s ease;
   }
 
-  .user-box input:focus ~ label,
-  .user-box input:valid ~ label {
+  .form-group input:focus ~ label,
+  .form-group input:valid ~ label {
     top: -10px;
     font-size: 12px;
     color: #f39c12;
   }
 
+  .captcha-img {
+    margin-top: 8px;
+    height: 42px;
+    border-radius: 6px;
+    border: 1px solid #aaa;
+    width: 100%;
+    object-fit: contain;
+  }
+
   .login-button {
-    position: relative;
-    display: inline-block;
-    padding: 12px 24px;
+    width: 100%;
+    background: transparent;
+    border: 2px solid #f39c12;
+    padding: 12px;
     color: #f39c12;
     font-size: 16px;
     font-weight: bold;
     text-transform: uppercase;
-    text-decoration: none;
-    overflow: hidden;
-    letter-spacing: 2px;
-    border: none;
-    background: none;
     cursor: pointer;
-    margin-top: 10px;
+    transition: 0.3s;
+    letter-spacing: 1px;
   }
 
-  .login-button span {
-    position: absolute;
-    display: block;
-  }
-
-  .login-button span:nth-child(1) {
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: #f39c12;
-    animation: btn-anim1 1s linear infinite;
-  }
-
-  .login-button span:nth-child(2) {
-    bottom: 0;
-    right: 0;
-    width: 100%;
-    height: 2px;
-    background: #f39c12;
-    animation: btn-anim2 1s linear infinite;
-  }
-
-  @keyframes btn-anim1 {
-    0% {transform: translateX(-100%);}
-    50%,100% {transform: translateX(100%);}
-  }
-
-  @keyframes btn-anim2 {
-    0% {transform: translateX(100%);}
-    50%,100% {transform: translateX(-100%);}
-  }
-
-  .captcha-img {
-    margin-top: 10px;
-    height: 42px;
-    border-radius: 6px;
-    border: 1px solid #aaa;
-    cursor: pointer;
+  .login-button:hover {
+    background-color: #f39c12;
+    color: #000;
   }
 
   .flash-msg {
-    color: #ff8080;
-    margin-top: 20px;
+    color: #ff9999;
     font-size: 14px;
+    margin-top: 20px;
+    text-align: center;
   }
 
-  /* ✅ 手机屏幕优化 */
   @media (max-width: 480px) {
     .login-box {
-      max-width: 90%;
-      margin: 60px auto;
-      padding: 30px 20px;
+      padding: 24px 18px;
     }
 
-    .login-box h2 {
+    .login-title {
       font-size: 20px;
       margin-bottom: 24px;
     }
 
-    .user-box input {
-      padding: 10px 8px;
+    .form-group input {
       font-size: 15px;
+      padding: 12px 8px;
     }
 
-    .user-box label {
+    .form-group label {
       font-size: 13px;
     }
 
     .login-button {
       font-size: 15px;
-      padding: 10px 20px;
+      padding: 11px;
     }
 
     .captcha-img {
-      height: 36px;
+      height: 38px;
     }
   }
 </style>
 
-<div class="login-box">
-  <h2>登录账户</h2>
-  <form method="POST" action="/login">
-    <div class="user-box">
-      <input type="text" name="username" id="username" required>
-      <label>用户名</label>
-    </div>
+<div class="login-container">
+  <div class="login-box">
+    <div class="login-title">登录账户</div>
 
-    <div class="user-box">
-      <input type="password" name="password" id="password" required>
-      <label>密码</label>
-    </div>
-
-    {% if show_captcha %}
-    <div class="user-box">
-      <input type="text" name="captcha" id="captcha" required>
-      <label>验证码</label>
-      <img src="/captcha" onclick="this.src='/captcha?' + Math.random()" title="点击刷新验证码" class="captcha-img">
-    </div>
-    {% endif %}
-
-    <button class="login-button" type="submit">
-      <span></span><span></span>登录
-    </button>
-  </form>
-
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <div class="flash-msg">
-        {% for msg in messages %}
-          ❌ {{ msg }}<br>
-        {% endfor %}
+    <form method="POST" action="/login">
+      <div class="form-group">
+        <input type="text" name="username" id="username" required>
+        <label>用户名</label>
       </div>
-    {% endif %}
-  {% endwith %}
+
+      <div class="form-group">
+        <input type="password" name="password" id="password" required>
+        <label>密码</label>
+      </div>
+
+      {% if show_captcha %}
+      <div class="form-group">
+        <input type="text" name="captcha" id="captcha" required>
+        <label>验证码</label>
+        <img src="/captcha" onclick="this.src='/captcha?' + Math.random()" title="点击刷新验证码" class="captcha-img">
+      </div>
+      {% endif %}
+
+      <button type="submit" class="login-button">登录</button>
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-msg">
+          {% for msg in messages %}
+            ❌ {{ msg }}<br>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+  </div>
 </div>
 
 {% endblock %}
