@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>4D 后台</title>
+    <title>4D</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         body {
@@ -87,7 +87,7 @@
         <div class="nav-right">
             {% if session.get('username') %}
                 👤 {{ session['username'] }} | <a href="/logout">登出</a>
-            {% else %}
+            {% elif request.path != '/login' %}
                 <a href="/login">登录</a>
             {% endif %}
         </div>
