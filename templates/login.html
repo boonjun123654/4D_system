@@ -1,9 +1,10 @@
 {% extends "layout.html" %}
+{% set body_class = 'login-body' %}
 {% block content %}
 
 <style>
   /* 默认背景图（PC） */
-  body {
+  .login-body {
     background: url("/static/images/login_bg_desktop.jpg") no-repeat center center fixed;
     background-size: cover;
     margin: 0;
@@ -126,7 +127,7 @@
   }
 
 @media (max-width: 480px) {
-  body {
+  .login-body {
     background: url("/static/images/login_bg_mobile.jpg?v=2") no-repeat center center fixed;
     background-size: cover;
     display: flex;
