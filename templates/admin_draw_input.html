@@ -9,6 +9,7 @@
 </div>
 
 <form method="POST" action="/admin/draw_input">
+    {{ csrf_token() }}
     <table border="1" cellpadding="6" cellspacing="0">
         <thead>
             <tr>
