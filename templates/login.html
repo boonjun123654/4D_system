@@ -1,48 +1,70 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div style="max-width: 400px; margin: 40px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <h2 style="text-align: center; margin-bottom: 25px; color: #333;">登录账户</h2>
+<div style="
+    max-width: 420px;
+    margin: 60px auto;
+    padding: 30px 25px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    transition: all 0.3s ease;
+">
+
+    <h2 style="
+        text-align: center;
+        margin-bottom: 30px;
+        color: #2d2d2d;
+        font-weight: 700;
+        font-size: 24px;
+    ">
+        Login
+    </h2>
 
     <form method="POST" action="/login">
-        <div style="margin-bottom: 20px;">
-            <label for="username" style="display:block; margin-bottom: 6px; font-weight: bold;">用户名：</label>
+        <div style="margin-bottom: 22px;">
+            <label for="username" style="font-weight: 600; color: #444; margin-bottom: 8px; display: block;">USER_ID：</label>
             <input type="text" id="username" name="username" required
-                   style="width: 100%; padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                style="width: 100%; padding: 12px; font-size: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; transition: border-color 0.3s;"
+                onfocus="this.style.borderColor='#7b4fe2'" onblur="this.style.borderColor='#ccc'">
         </div>
 
-        <div style="margin-bottom: 20px;">
-            <label for="password" style="display:block; margin-bottom: 6px; font-weight: bold;">密码：</label>
+        <div style="margin-bottom: 22px;">
+            <label for="password" style="font-weight: 600; color: #444; margin-bottom: 8px; display: block;">PASSWORD：</label>
             <input type="password" id="password" name="password" required
-                   style="width: 100%; padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                style="width: 100%; padding: 12px; font-size: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; transition: border-color 0.3s;"
+                onfocus="this.style.borderColor='#7b4fe2'" onblur="this.style.borderColor='#ccc'">
         </div>
 
         {% if show_captcha %}
-        <div style="margin-bottom: 20px;">
-            <label for="captcha" style="display:block; margin-bottom: 6px; font-weight: bold;">验证码：</label>
-            <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="margin-bottom: 22px;">
+            <label for="captcha" style="font-weight: 600; color: #444; margin-bottom: 8px; display: block;">验证码：</label>
+            <div style="display: flex; align-items: center; gap: 12px;">
                 <input type="text" id="captcha" name="captcha" required
-                       style="flex: 1; padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                    style="flex: 1; padding: 12px; font-size: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
                 <img src="/captcha" onclick="this.src='/captcha?' + Math.random()" title="点击刷新验证码"
-                     style="height: 42px; vertical-align: middle; cursor: pointer; border: 1px solid #ccc; border-radius: 4px;">
+                    style="height: 44px; cursor: pointer; border: 1px solid #ccc; border-radius: 6px;">
             </div>
         </div>
         {% endif %}
 
         <button type="submit"
-                style="width: 100%; padding: 12px; font-size: 16px; background-color: #5c33cc; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            style="width: 100%; padding: 14px; font-size: 16px; background-color: #673de6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.3s;"
+            onmouseover="this.style.backgroundColor='#512bd4'"
+            onmouseout="this.style.backgroundColor='#673de6'">
             登录
         </button>
     </form>
 
     {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <ul style="color: red; margin-top: 20px; padding-left: 0;">
-          {% for msg in messages %}
-            <li style="list-style: none;">❌ {{ msg }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
+    {% if messages %}
+    <ul style="color: #d9534f; margin-top: 22px; padding-left: 0;">
+        {% for msg in messages %}
+        <li style="list-style: none;">❌ {{ msg }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
     {% endwith %}
 </div>
 
