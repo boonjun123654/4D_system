@@ -68,7 +68,7 @@
         }
     </style>
 </head>
-<body>
+<body class="{{ body_class | default('') }}">
     <nav>
         {% if session.get('username') %}
         <div class="nav-left">
