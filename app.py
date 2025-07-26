@@ -17,6 +17,7 @@ from PIL import Image
 from werkzeug.utils import secure_filename
 from captcha.image import ImageCaptcha
 from random import random
+from flask_talisman import Talisman
 import string
 import os
 
@@ -24,9 +25,21 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = 'your-secret-key'
+app.config['SESSION_COOKIE_SECURE'] = True        # 只通过 HTTPS 发送 Cookie
+app.config['SESSION_COOKIE_HTTPONLY'] = True      # JavaScript 无法访问 Cookie
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'     # 防止 CSRF 的辅助策略
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 login_attempts = {}
+
+Talisman(app,
+    content_security_policy=None,  # 如果你用自己写的 JS/CSS，可以暂时关闭 CSP，避免报错
+    force_https=True,
+    strict_transport_security=True,
+    strict_transport_security_preload=True,
+    strict_transport_security_include_subdomains=True,
+    frame_options='DENY'  # 防止被 iframe 嵌套
+)
 
 MAX_ATTEMPTS = 5
 LOCKOUT_MINUTES = 10
@@ -57,6 +70,13 @@ def login_required(view_func):
             return redirect('/login')
         return view_func(*args, **kwargs)
     return wrapper
+
+@app.before_request
+def enforce_https_in_render():
+    """Render 自动注入 X-Forwarded-Proto 头，值为 'http' 或 'https'"""
+    if request.headers.get('X-Forwarded-Proto', 'http') != 'https':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
 
 @app.route("/")
 def index():
