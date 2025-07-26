@@ -125,44 +125,52 @@
     font-size: 14px;
   }
 
-  /* ✅ 手机版适配，仅添加以下内容 */
-  @media (max-width: 480px) {
-    body {
-      background: url("/static/images/login_bg_mobile.jpg?v=2") no-repeat center center fixed;
-      background-size: cover;
-    }
-
-    .login-box {
-      max-width: 92%;
-      margin: 60px auto;
-      padding: 28px 20px;
-    }
-
-    .login-box h2 {
-      font-size: 20px;
-      margin-bottom: 24px;
-    }
-
-    .user-box input {
-      font-size: 15px;
-      padding: 10px 8px;
-    }
-
-    .user-box label {
-      font-size: 13px;
-    }
-
-    .login-button {
-      font-size: 15px;
-      padding: 10px 20px;
-    }
-
-    .captcha-img {
-      height: 36px;
-      width: 100%;
-      object-fit: contain;
-    }
+@media (max-width: 480px) {
+  body {
+    background: url("/static/images/login_bg_mobile.jpg?v=2") no-repeat center center fixed;
+    background-size: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
   }
+
+  .login-box {
+    width: 95%;
+    padding: 32px 22px;
+    margin: 0 auto;
+    background: rgba(0, 0, 0, 0.7);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    border-radius: 14px;
+  }
+
+  .login-box h2 {
+    font-size: 22px;
+    margin-bottom: 26px;
+    text-align: center;
+  }
+
+  .user-box input {
+    font-size: 17px;
+    padding: 14px 10px;
+  }
+
+  .user-box label {
+    font-size: 14px;
+  }
+
+  .login-button {
+    font-size: 17px;
+    padding: 12px 24px;
+    width: 100%;
+  }
+
+  .captcha-img {
+    height: 38px;
+    width: 100%;
+    object-fit: contain;
+  }
+}
 </style>
 
 <div class="login-box">
