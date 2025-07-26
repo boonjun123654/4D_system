@@ -69,6 +69,8 @@
     </style>
 </head>
 <body class="{{ body_class | default('') }}">
+
+    {% if body_class != 'login-body' %}
     <nav>
         {% if session.get('username') %}
         <div class="nav-left">
@@ -87,12 +89,12 @@
         <div class="nav-right">
             {% if session.get('username') %}
                 👤 {{ session['username'] }} | <a href="/logout">登出</a>
-            {% elif request.path != '/login' %}
-                <a href="/login">登录</a>
             {% endif %}
         </div>
     </nav>
     <hr>
+    {% endif %}
+
     {% block content %}{% endblock %}
 </body>
 </html>
