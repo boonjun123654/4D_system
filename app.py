@@ -32,13 +32,23 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 login_attempts = {}
 
+csp = {
+    'default-src': "'self'",
+    'script-src': ["'self'", "'unsafe-inline'"],
+    'style-src': ["'self'", "'unsafe-inline'"],
+    'img-src': ["'self'", "data:"],
+    'font-src': "'self'",
+    'connect-src': "'self'",
+    'frame-ancestors': "'none'"
+}
+
 Talisman(app,
-    content_security_policy=None,  # 如果你用自己写的 JS/CSS，可以暂时关闭 CSP，避免报错
+    content_security_policy=csp,
     force_https=True,
     strict_transport_security=True,
     strict_transport_security_preload=True,
     strict_transport_security_include_subdomains=True,
-    frame_options='DENY'  # 防止被 iframe 嵌套
+    frame_options='DENY'
 )
 
 MAX_ATTEMPTS = 5
