@@ -196,7 +196,31 @@ def bet():
 
             for market in markets:
                 for date_str in dates:
-                        all_perms = get_box_permutations(number)  # 全部排列
+                    if bet_type == '正字':
+                        # 获取所有排列组合，检查是否有重复的数字组合
+                        all_perms = get_box_permutations(number)  # 获取正字号码的所有排列组合
+                        existing_bets = db.session.query(FourDBet).filter(
+                            FourDBet.number.in_(all_perms),  # 检查排列组合
+                            FourDBet.markets.any(market),
+                            FourDBet.dates.any(date_str),
+                            FourDBet.status == 'active'
+                        ).all()
+
+                        # 如果数据库中已有相同的IBox/Box类型的号码，需要拦截
+                        if existing_bets:
+                            # 检查是否已有相同的正字类型号码
+                            if any(eb.type == '正字' and eb.number == save_number for eb in existing_bets):
+                                existing_total = sum(float(eb.win_amount) for eb in existing_bets)
+                                if existing_total + win_amount > 10000:
+                                    return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
+                
+                            # 检查是否已有IBox/Box类型的相同号码
+                            if any(eb.type in ['Box', 'IBox'] for eb in existing_bets):
+                                return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
+
+                    # 对于 IBox 或 Box 类型下注，继续检查所有排列组合
+                    else:
+                        all_perms = get_box_permutations(number)  # 获取所有排列组合
                         existing_bets = db.session.query(FourDBet).filter(
                             FourDBet.number.in_(all_perms),
                             FourDBet.markets.any(market),
@@ -204,10 +228,10 @@ def bet():
                             FourDBet.status == 'active'
                         ).all()
 
-                        existing_total = sum(float(eb.win_amount) for eb in existing_bets)
+                    existing_total = sum(float(eb.win_amount) for eb in existing_bets)
 
-                        if existing_total + win_amount > 10000:
-                            return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
+                    if existing_total + win_amount > 10000:
+                        return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
 
             factor = get_comb_count(number) if bet_type == 'Box' else 1
             total = (B + S + A + C) * factor * len(dates) * len(markets)
