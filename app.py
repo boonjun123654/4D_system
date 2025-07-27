@@ -89,6 +89,7 @@ def enforce_https_in_render():
         return redirect(url, code=301)
 
 @app.route("/")
+@login_required
 def index():
     return render_template("index.html", odds=odds)
 
