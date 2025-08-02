@@ -40,7 +40,7 @@
         {% for bet in items %}
         <div style="width: 260px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;
             {% if bet.status == 'delete' %}
-                background-color: #bd7575; color: #666; opacity: 0.6;
+                background-color: #cfc8ca; color: #000000; opacity: 0.6;
             {% else %}
                 background-color: #fff;
             {% endif %}
@@ -122,3 +122,4 @@ if (params.get("deleted") === "1") {
 history.replaceState({}, document.title, location.pathname);
 </script>
 {% endblock %}
+
