@@ -216,7 +216,7 @@ def bet():
                         all_perms = get_box_permutations(number)  # 获取所有排列组合
                         existing_bets = db.session.query(FourDBet).filter(
                             FourDBet.number.in_(all_perms),  # 检查所有排列组合
-                            FourDBet.type.in(['Box', 'IBox']),  # 查找IBox/Box类型
+                            FourDBet.type.in_(['Box', 'IBox']),  # 查找IBox/Box类型
                             FourDBet.markets.any(market),
                             FourDBet.dates.any(date_str),
                             FourDBet.status == 'active'
