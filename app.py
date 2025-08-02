@@ -516,8 +516,7 @@ def report():
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
 
-    # 所有下注记录（不使用 created_at 过滤）
-    all_bets = FourDBet.query.all()
+    all_bets = FourDBet.query.filter(FourDBet.status.in_(['active', 'locked'])).all()
 
     # 所有代理
     agents = Agent4D.query.all()
