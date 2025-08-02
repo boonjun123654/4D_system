@@ -197,28 +197,38 @@ def bet():
             for market in markets:
                 for date_str in dates:
                     if bet_type == '正字':
-                        # 获取所有排列组合，检查是否有重复的数字组合
-                        all_perms = get_box_permutations(number)  # 获取正字号码的所有排列组合
+                        # 检查数据库中是否有正字类型的相同号码
                         existing_bets = db.session.query(FourDBet).filter(
-                            FourDBet.number.in_(all_perms),  # 检查排列组合
+                            FourDBet.number == save_number,  # 只检查完全相同的号码
+                            FourDBet.type == '正字',  # 只查正字类型
                             FourDBet.markets.any(market),
                             FourDBet.dates.any(date_str),
                             FourDBet.status == 'active'
                         ).all()
 
-                        # 如果数据库中已有相同的IBox/Box类型的号码，需要拦截
+                        # 如果已有正字类型的相同号码，并且金额超过限制，则拦截
                         if existing_bets:
-                            # 检查是否已有相同的正字类型号码
-                            if any(eb.type == '正字' and eb.number == save_number for eb in existing_bets):
-                                existing_total = sum(float(eb.win_amount) for eb in existing_bets)
-                                if existing_total + win_amount > 10000:
-                                    return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
-                
-                            # 检查是否已有IBox/Box类型的相同号码
-                            if any(eb.type in ['Box', 'IBox'] for eb in existing_bets):
+                            existing_total = sum(float(eb.win_amount) for eb in existing_bets)
+                            if existing_total + win_amount > 10000:
                                 return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
 
-                    # 对于 IBox 或 Box 类型下注，继续检查所有排列组合
+                        # 检查数据库里是否有IBox/Box类型的号码
+                        all_perms = get_box_permutations(number)  # 获取所有排列组合
+                        existing_bets = db.session.query(FourDBet).filter(
+                            FourDBet.number.in_(all_perms),  # 检查所有排列组合
+                            FourDBet.type.in(['Box', 'IBox']),  # 查找IBox/Box类型
+                            FourDBet.markets.any(market),
+                            FourDBet.dates.any(date_str),
+                            FourDBet.status == 'active'
+                        ).all()
+
+                        # 如果数据库中已有IBox/Box类型相同的号码组合，且金额超过限制，则拦截
+                        if existing_bets:
+                            existing_total = sum(float(eb.win_amount) for eb in existing_bets)
+                            if existing_total + win_amount > 10000:
+                                return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
+        
+                    # 对于IBox或Box类型下注，继续检查所有排列组合
                     else:
                         all_perms = get_box_permutations(number)  # 获取所有排列组合
                         existing_bets = db.session.query(FourDBet).filter(
