@@ -94,7 +94,7 @@
             </div>
 
             <div style="margin-top:0;">
-              GT = {{ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) }}
+              GT={{ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) }}
             </div>
           </div>
 
@@ -244,6 +244,7 @@ if (params.get("deleted") === "1") {
 history.replaceState({}, document.title, location.pathname);
 </script>
 {% endblock %}
+
 
 
 
