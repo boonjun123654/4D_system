@@ -40,82 +40,96 @@
 
     <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
       {% for order in orders %}
-        <div style="width: 360px; border: 1px solid #ddd; padding: 12px; border-radius: 10px;
+        {# 计算日期范围与市场字符串 #}
+        {% set first_date = order.dates|first if order.dates else '' %}
+        {% set last_date  = order.dates|last  if order.dates else '' %}
+        {% set date_range = (first_date ~ '-' ~ last_date) if (order.dates and order.dates|length>1) else (first_date or '') %}
+        {% set markets_str = '*' ~ (order.markets|join('')) %}
+
+        {# 预先拼接复制文本（严格按你要的格式） #}
+        {% set lines_text = [] %}
+        {% for ln in order.lines %}
+          {% set parts = [] %}
+          {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
+          {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
+          {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
+          {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
+          {% set line_txt = ln.number ~ '=' ~ (parts|join(' ')) ~ ((' (' ~ ln.type ~ ')') if ln.type != '正字' else '') %}
+          {% set _ = lines_text.append(line_txt) %}
+        {% endfor %}
+        {% set copy_payload = (date_range ~ "\n" ~ markets_str ~ "\n" ~ (lines_text|join("\n")) ~ "\nGT=" ~ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) ) %}
+
+        <div class="order-card" style="width: 360px; border: 1px solid #ddd; padding: 12px; border-radius: 10px;
             {% if order.status == 'delete' %}
-                background-color: #cfc8ca; color: #000000; opacity: 0.7;
+                background-color: #cfc8ca; color: #000000; opacity: 0.85;
             {% else %}
                 background-color: #fff;
             {% endif %}
             box-shadow: 2px 2px 5px rgba(0,0,0,0.05); font-family: monospace;
             display: flex; flex-direction: column; justify-content: space-between; position: relative;">
 
-          {# 订单头 #}
-          <div style="font-size: 13px; background: #f8f8f8; padding: 6px 8px; border-radius: 6px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr; gap: 4px;">
-            <div>📦 <strong>订单号：</strong>{{ order.order_code }}</div>
-            <div>👤 <strong>代理：</strong>{{ order.agent_id }}</div>
-            <div>🗓️ <strong>开奖日期：</strong>{% for d in order.dates %}<span style="margin-right:6px">{{ d }}</span>{% endfor %}</div>
-            <div>🏷️ <strong>市场：</strong>
-              {% for ch in order.markets %}
-                <span style="display:inline-block;border:1px solid #ddd;border-radius:4px;padding:0 6px;margin-right:4px;font-family:system-ui, -apple-system, Segoe UI, Roboto;">*{{ ch }}</span>
-              {% endfor %}
-            </div>
+          {# 顶部只显示代理 #}
+          <div style="font-size: 14px; background: #f8f8f8; padding: 6px 8px; border-radius: 6px; margin-bottom: 8px;">
+            👤 <strong>代理：</strong>{{ order.agent_id }}
           </div>
 
-          {# 明细行 #}
-          <div style="flex-grow: 1; margin-bottom: 12px; font-size: 14px; line-height: 1.5;">
-            {% if order.lines and order.lines|length > 0 %}
+          {# 主体：日期范围、市场、号码行 #}
+          <div style="flex-grow: 1; margin-bottom: 10px; font-size: 14px; line-height: 1.6;">
+            {% if date_range %}<div>{{ date_range }}</div>{% endif %}
+            {% if order.markets %}<div>{{ markets_str }}</div>{% endif %}
+
+            <div style="margin-top: 6px;">
               {% for ln in order.lines %}
-                <div style="padding: 4px 0; border-bottom: 1px dashed #eee;">
-                  {# 号码 + 金额项（只显示非0） #}
-                  <div>
-                    {{ ln.number }} =
-                    {% if ln.b and ln.b|float > 0 %}{{ "%.1f"|format(ln.b)|replace(".0","") }}B {% endif %}
-                    {% if ln.s and ln.s|float > 0 %}{{ "%.1f"|format(ln.s)|replace(".0","") }}S {% endif %}
-                    {% if ln.a and ln.a|float > 0 %}{{ "%.1f"|format(ln.a)|replace(".0","") }}A {% endif %}
-                    {% if ln.c and ln.c|float > 0 %}{{ "%.1f"|format(ln.c)|replace(".0","") }}C {% endif %}
-                    {% if ln.type != '正字' %}({{ ln.type }}){% endif %}
-                  </div>
-                  {# 行内 GT / WIN（可选展示） #}
-                  <div style="font-size:12px;color:#666;">
-                    GT={{ "%.2f"|format(ln.total)|replace(".00","") }}
-                    {% if ln.win_amount and ln.win_amount|float > 0 %}
-                      <span style="color:#28a745; margin-left:8px;">WIN={{ "%.2f"|format(ln.win_amount)|replace(".00","") }}</span>
-                    {% endif %}
-                    {% if ln.markets %}
-                      <span style="margin-left:8px; color:#999;">{{ ln.markets|join('') }}</span>
-                    {% endif %}
-                  </div>
+                <div style="padding: 3px 0; border-bottom: 1px dashed #eee;">
+                  {# 号码 = 非0金额（顺序 B S A C），IBox/Box 标注 #}
+                  <span>{{ ln.number }} =</span>
+                  {% if ln.b and ln.b|float > 0 %}<span> {{ "%.1f"|format(ln.b)|replace(".0","") }}B</span>{% endif %}
+                  {% if ln.s and ln.s|float > 0 %}<span> {{ "%.1f"|format(ln.s)|replace(".0","") }}S</span>{% endif %}
+                  {% if ln.a and ln.a|float > 0 %}<span> {{ "%.1f"|format(ln.a)|replace(".0","") }}A</span>{% endif %}
+                  {% if ln.c and ln.c|float > 0 %}<span> {{ "%.1f"|format(ln.c)|replace(".0","") }}C</span>{% endif %}
+                  {% if ln.type != '正字' %}<span> ({{ ln.type }})</span>{% endif %}
                 </div>
               {% endfor %}
-            {% else %}
-              <div style="color:#999;">（无明细）</div>
-            {% endif %}
+            </div>
+
+            <div style="margin-top: 8px;">
+              GT = {{ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) }}
+            </div>
           </div>
 
-          {# 整单合计 #}
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px; margin-top: 6px;">
-            <div>
-              <strong>GT</strong> = {{ "%.2f"|format(order.gt_total)|replace(".00","") }}
-              {% if order.win_total and order.win_total|float > 0 %}
-                <span style="margin-left:10px; color:#28a745;"><strong>WIN</strong> = {{ "%.2f"|format(order.win_total)|replace(".00","") }}</span>
-              {% endif %}
-            </div>
-            <div>
-              {% if order.status == 'locked' %}
-                <span style="display:inline-block;padding:6px 10px;background:#ccc;color:#666;border-radius:6px;cursor:not-allowed;">已锁注</span>
-              {% elif order.status == 'delete' %}
-                <span style="display:inline-block;padding:6px 10px;background:#0a0a0a;color:#fff;border-radius:6px;">🗑️ 已删除</span>
-              {% else %}
-                <a href="/bet?order={{ order.order_code }}">
-                  <button type="button" style="padding: 6px 12px; background-color:#007bff; color:white; border:none; border-radius:6px;">重新下注整单</button>
-                </a>
-                {# 如需“整单删除”，待你实现后可启用：
-                <form method="post" action="/delete_order/{{ order.order_code }}" style="display:inline" onsubmit="return confirm('确认删除此订单？');">
-                  <button type="submit" style="padding:6px 12px; background-color:#dc3545; color:white; border:none; border-radius:6px; margin-left:6px;">删除订单</button>
-                </form>
-                #}
-              {% endif %}
-            </div>
+          {# 底部按钮：复制 / 重新下注整单 / 删除（锁注禁删） #}
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button type="button"
+                    class="copy-btn"
+                    data-copy="{{ copy_payload | e }}"
+                    style="flex:1; padding: 6px 10px; background:#f0f0f0; border:1px solid #ddd; border-radius:6px; cursor:pointer;">
+              复制
+            </button>
+
+            <a href="/bet?order={{ order.order_code }}" style="flex:1;">
+              <button type="button" style="width:100%; padding:6px 10px; background-color:#007bff; color:white; border:none; border-radius:6px;">
+                重新下注整单
+              </button>
+            </a>
+
+            {% if order.status == 'locked' %}
+              <button type="button" disabled style="flex:1; padding:6px 10px; background:#ccc; color:#666; border:none; border-radius:6px; cursor:not-allowed;">
+                已锁注
+              </button>
+            {% elif order.status == 'delete' %}
+              <span style="flex:1; text-align:center; padding:6px 10px; background:#0a0a0a; color:#fff; border-radius:6px;">
+                🗑️ 已删除
+              </span>
+            {% else %}
+              <form method="post"
+                    style="flex:1"
+                    action="/delete_order/{{ order.order_code }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
+                    onsubmit="return confirm('确认删除此订单？');">
+                <button type="submit" style="width:100%; padding:6px 10px; background-color:#dc3545; color:white; border:none; border-radius:6px;">
+                  删除
+                </button>
+              </form>
+            {% endif %}
           </div>
         </div>
       {% endfor %}
@@ -200,8 +214,24 @@
 {% if (not orders_by_date or orders_by_date|length == 0) and (not legacy_grouped or legacy_grouped|length == 0) %}
   <p style="color: #cc0000; font-size: 16px;">❗ 没有记录</p>
 {% endif %}
-
 <script>
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.copy-btn');
+  if(!btn) return;
+  const text = (btn.getAttribute('data-copy') || '').trim();
+  navigator.clipboard.writeText(text).then(()=>{
+    alert('✅ 已复制到剪贴板');
+  }).catch(()=>{
+    // 兼容少数环境
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('✅ 已复制到剪贴板');
+  });
+});
+
 const params = new URLSearchParams(window.location.search);
 if (params.get("deleted") === "1") {
     alert("✅ 已删除下注记录");
@@ -213,3 +243,4 @@ if (params.get("deleted") === "1") {
 history.replaceState({}, document.title, location.pathname);
 </script>
 {% endblock %}
+
