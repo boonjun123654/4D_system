@@ -20,6 +20,7 @@ class FourDBet(db.Model):
     markets = db.Column(db.ARRAY(db.Text), nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     status = db.Column(db.String(10), default='active')  # 'active' / 'locked'
+    order_code = db.Column(db.String(16))
 
 class Agent4D(db.Model):
     __tablename__ = 'agent_4d'
@@ -65,3 +66,17 @@ class LoginAttempt(db.Model):
     attempt_count = db.Column(db.Integer, default=0)
     last_attempt = db.Column(db.DateTime, default=datetime.utcnow)
     locked_until = db.Column(db.DateTime, nullable=True)
+
+class Orders4D(db.Model):
+    __tablename__ = 'orders_4d'
+    id = db.Column(db.Integer, primary_key=True)
+    order_date = db.Column(db.Date, nullable=False)
+    order_seq = db.Column(db.Integer, nullable=False)
+    order_code = db.Column(db.String(16), nullable=False, unique=True)
+    agent_id = db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+
+class OrderCounter4D(db.Model):
+    __tablename__ = 'order_counter_4d'
+    order_date = db.Column(db.Date, primary_key=True)
+    last_seq = db.Column(db.Integer, nullable=False)
