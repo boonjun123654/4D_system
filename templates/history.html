@@ -44,7 +44,9 @@
         {% set first_date = order.dates|first if order.dates else '' %}
         {% set last_date  = order.dates|last  if order.dates else '' %}
         {% set date_range = (first_date ~ '-' ~ last_date) if (order.dates and order.dates|length>1) else (first_date or '') %}
-        {% set markets_str = '*' ~ (order.markets|join('')) %}
+        {% set market_order = 'MPTSHEBKW' %}
+        {% set ms = namespace(val='*') %}
+        {% for ch in market_order %}{% if ch in order.markets %}{% set ms.val = ms.val + ch %}{% endif %}{% endfor %}
 
         {# 预先拼接复制文本（严格按你要的格式） #}
         {% set lines_text = [] %}
@@ -76,13 +78,13 @@
           {# 主体：日期范围、市场、号码行 #}
           <div style="flex-grow: 1; margin-bottom: 10px; font-size: 14px; line-height: 1.6;">
             {% if date_range %}<div>{{ date_range }}</div>{% endif %}
-            {% if order.markets %}<div>{{ markets_str }}</div>{% endif %}
+            {% if order.markets %}<div>{{ ms.val }}</div>{% endif %}
 
             <div style="margin-top: 6px;">
               {% for ln in order.lines %}
-                <div style="padding: 3px 0; border-bottom: 1px dashed #eee;">
+                <div style="padding: 2px 0;">
                   {# 号码 = 非0金额（顺序 B S A C），IBox/Box 标注 #}
-                  <span>{{ ln.number }} =</span>
+                  <span>{{ ln.number }}=</span>
                   {% if ln.b and ln.b|float > 0 %}<span> {{ "%.1f"|format(ln.b)|replace(".0","") }}B</span>{% endif %}
                   {% if ln.s and ln.s|float > 0 %}<span> {{ "%.1f"|format(ln.s)|replace(".0","") }}S</span>{% endif %}
                   {% if ln.a and ln.a|float > 0 %}<span> {{ "%.1f"|format(ln.a)|replace(".0","") }}A</span>{% endif %}
@@ -243,4 +245,5 @@ if (params.get("deleted") === "1") {
 history.replaceState({}, document.title, location.pathname);
 </script>
 {% endblock %}
+
 
