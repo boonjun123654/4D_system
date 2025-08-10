@@ -59,7 +59,7 @@
           {% set line_txt = ln.number ~ '=' ~ (parts|join(' ')) ~ ((' (' ~ ln.type ~ ')') if ln.type != '正字' else '') %}
           {% set _ = lines_text.append(line_txt) %}
         {% endfor %}
-        {% set copy_payload = (date_range ~ "\n" ~ markets_str ~ "\n" ~ (lines_text|join("\n")) ~ "\nGT=" ~ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) ) %}
+        {% set copy_payload = (date_range ~ "\n" ~ ms.val ~ "\n" ~ (lines_text|join("\n")) ~ "\nGT=" ~ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) ) %}
 
         <div class="order-card" style="width: 360px; border: 1px solid #ddd; padding: 12px; border-radius: 10px;
             {% if order.status == 'delete' %}
@@ -80,21 +80,20 @@
             {% if date_range %}<div>{{ date_range }}</div>{% endif %}
             {% if order.markets %}<div>{{ ms.val }}</div>{% endif %}
 
-            <div style="margin-top: 0;">
+            <div style="margin-top:0;">
               {% for ln in order.lines %}
-                <div style="padding: 2px 0;">
-                  {# 号码 = 非0金额（顺序 B S A C），IBox/Box 标注 #}
-                  <span>{{ ln.number }}=<span>
-                  {% if ln.b and ln.b|float > 0 %}<span> {{ "%.1f"|format(ln.b)|replace(".0","") }}B</span>{% endif %}
-                  {% if ln.s and ln.s|float > 0 %}<span> {{ "%.1f"|format(ln.s)|replace(".0","") }}S</span>{% endif %}
-                  {% if ln.a and ln.a|float > 0 %}<span> {{ "%.1f"|format(ln.a)|replace(".0","") }}A</span>{% endif %}
-                  {% if ln.c and ln.c|float > 0 %}<span> {{ "%.1f"|format(ln.c)|replace(".0","") }}C</span>{% endif %}
-                  {% if ln.type != '正字' %}<span> ({{ ln.type }})</span>{% endif %}
+                {% set parts = [] %}
+                {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
+                {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
+                {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
+                {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
+                <div style="padding:0; margin:0;">
+                  {{ ln.number }}={{ parts|join(' ') }}{% if ln.type != '正字' %} ({{ ln.type }}){% endif %}
                 </div>
               {% endfor %}
             </div>
 
-            <div style="margin-top: 8px;">
+            <div style="margin-top:0;">
               GT = {{ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) }}
             </div>
           </div>
@@ -245,6 +244,7 @@ if (params.get("deleted") === "1") {
 history.replaceState({}, document.title, location.pathname);
 </script>
 {% endblock %}
+
 
 
 
