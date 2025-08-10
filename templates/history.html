@@ -80,11 +80,11 @@
             {% if date_range %}<div>{{ date_range }}</div>{% endif %}
             {% if order.markets %}<div>{{ ms.val }}</div>{% endif %}
 
-            <div style="margin-top: 6px;">
+            <div style="margin-top: 0;">
               {% for ln in order.lines %}
                 <div style="padding: 2px 0;">
                   {# 号码 = 非0金额（顺序 B S A C），IBox/Box 标注 #}
-                  <span>{{ ln.number }}=</span>
+                  <span>{{ ln.number }}=<span>
                   {% if ln.b and ln.b|float > 0 %}<span> {{ "%.1f"|format(ln.b)|replace(".0","") }}B</span>{% endif %}
                   {% if ln.s and ln.s|float > 0 %}<span> {{ "%.1f"|format(ln.s)|replace(".0","") }}S</span>{% endif %}
                   {% if ln.a and ln.a|float > 0 %}<span> {{ "%.1f"|format(ln.a)|replace(".0","") }}A</span>{% endif %}
@@ -245,5 +245,6 @@ if (params.get("deleted") === "1") {
 history.replaceState({}, document.title, location.pathname);
 </script>
 {% endblock %}
+
 
 
