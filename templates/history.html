@@ -107,12 +107,6 @@
               复制
             </button>
 
-            <a href="/bet?order={{ order.order_code }}" style="flex:1;">
-              <button type="button" style="width:100%; padding:6px 10px; background-color:#007bff; color:white; border:none; border-radius:6px;">
-                重新下注整单
-              </button>
-            </a>
-
             {% if order.status == 'locked' %}
               <button type="button" disabled style="flex:1; padding:6px 10px; background:#ccc; color:#666; border:none; border-radius:6px; cursor:not-allowed;">
                 已锁注
@@ -244,6 +238,7 @@ if (params.get("deleted") === "1") {
 history.replaceState({}, document.title, location.pathname);
 </script>
 {% endblock %}
+
 
 
 
