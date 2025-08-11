@@ -513,38 +513,47 @@ def get_odds(market, prize_name, bet, type_):
 @app.route('/report')
 @login_required
 def report():
+    role = session.get('role')
+    username = session.get('username')
+
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
-    end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
+    end_date   = datetime.strptime(end_date_str,   "%Y-%m-%d") if end_date_str   else datetime.today()
 
-    all_bets = FourDBet.query.filter(FourDBet.status.in_(['active', 'locked'])).all()
+    # 下注记录：仅 active/locked
+    bets_q = FourDBet.query.filter(FourDBet.status.in_(['active', 'locked']))
+    if role == 'agent':
+        bets_q = bets_q.filter(FourDBet.agent_id == username)
+    all_bets = bets_q.all()
 
-    # 所有代理
-    agents = Agent4D.query.all()
+    # 代理清单（用于拿佣金组别）；若是代理只取自己
+    agents_q = Agent4D.query
+    if role == 'agent':
+        agents_q = agents_q.filter(Agent4D.username == username)
+    agents = agents_q.all()
     agent_map = {a.username: a for a in agents}
 
-    # Ground A/B 佣金率
+    # Ground A/B 佣金率（保持不变）
     ground_commission = {
-        "A": {
-            "M": Decimal("0.26"), "P": Decimal("0.26"), "T": Decimal("0.26"), "S": Decimal("0.26"),
-            "B": Decimal("0.26"), "W": Decimal("0.26"), "K": Decimal("0.26"),
-            "H": Decimal("0.19"), "E": Decimal("0.19")
-        },
-        "B": {
-            "M": Decimal("0.22"), "P": Decimal("0.22"), "T": Decimal("0.22"), "S": Decimal("0.22"),
-            "H": Decimal("0.22"), "E": Decimal("0.22"), "B": Decimal("0.22"),
-            "W": Decimal("0.22"), "K": Decimal("0.22")
-        }
+        "A": {"M": Decimal("0.26"), "P": Decimal("0.26"), "T": Decimal("0.26"), "S": Decimal("0.26"),
+              "B": Decimal("0.26"), "W": Decimal("0.26"), "K": Decimal("0.26"),
+              "H": Decimal("0.19"), "E": Decimal("0.19")},
+        "B": {"M": Decimal("0.22"), "P": Decimal("0.22"), "T": Decimal("0.22"), "S": Decimal("0.22"),
+              "H": Decimal("0.22"), "E": Decimal("0.22"), "B": Decimal("0.22"),
+              "W": Decimal("0.22"), "K": Decimal("0.22")}
     }
 
-    # 查询中奖记录表（根据 draw_date）
-    all_wins = WinningRecord4D.query.filter(
+    # 中奖记录（按 draw_date + 身份过滤）
+    wins_q = WinningRecord4D.query.filter(
         WinningRecord4D.draw_date >= start_date.date(),
         WinningRecord4D.draw_date <= end_date.date()
-    ).all()
+    )
+    if role == 'agent':
+        wins_q = wins_q.filter(WinningRecord4D.agent_id == username)
+    all_wins = wins_q.all()
 
-    # 计算每个代理的中奖金额
+    # 每代理中奖金额
     win_amount_map = defaultdict(lambda: Decimal("0.00"))
     for w in all_wins:
         win_amount_map[w.agent_id] += Decimal(str(w.win_amount or "0.00"))
@@ -558,9 +567,9 @@ def report():
     })
 
     for r in all_bets:
-        # ✅ 过滤目标开奖日是否在范围内
+        # 过滤下注所涉开奖日是否在范围内（r.dates 为 dd/mm，映射到当年）
         match = False
-        for d in r.dates:
+        for d in (r.dates or []):
             try:
                 d_date = datetime.strptime(d, "%d/%m").replace(year=start_date.year)
                 if start_date <= d_date <= end_date:
@@ -573,13 +582,16 @@ def report():
 
         agent = agent_map.get(r.agent_id)
         if not agent:
-            continue
+            # 当 admin 查看全部时，agent_map 里可能缺某些代理；补查一次避免丢数据
+            agent = Agent4D.query.filter_by(username=r.agent_id).first()
+            if not agent:
+                continue
 
         group = agent.commission_group or 'A'
         per_market_total = r.total / Decimal(len(r.markets) or 1)
 
         commission_total = Decimal("0.00")
-        for m in r.markets:
+        for m in (r.markets or []):
             rate = ground_commission.get(group, {}).get(m, Decimal("0.00"))
             commission_total += per_market_total * rate
 
