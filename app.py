@@ -4,7 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 from odds_config import odds
 from datetime import datetime, timedelta,time
 from utils import calculate_payout
-from sqlalchemy import func,any_,text
+from sqlalchemy import func,any_,text,or_
 from models import db, FourDBet, Agent4D,DrawResult4D,WinningRecord4D,LoginAttempt,Orders4D
 from collections import defaultdict
 from itertools import permutations
@@ -611,89 +611,111 @@ def history():
 
     # 日期范围（默认今天）
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else datetime.today()
-    end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else datetime.today()
+    end_date   = datetime.strptime(end_date_str,   "%Y-%m-%d") if end_date_str   else datetime.today()
 
-    # ==== 1) 查询“订单头”并按订单聚合 ====
-    q = Orders4D.query.filter(
-        Orders4D.order_date >= start_date.date(),
-        Orders4D.order_date <= end_date.date()
-    )
-    # 权限/代理筛选（订单头）
+    # === 关键点：构造本次查询要匹配的 dd/mm 列表（用 bet.dates 来筛选，而不是 order_date）
+    ddmm_list = []
+    cur = start_date
+    while cur <= end_date:
+        ddmm_list.append(cur.strftime("%d/%m"))
+        cur += timedelta(days=1)
+
+    # ==== 1) 先把“符合日期范围”的明细行拉出来（用 dates.any(...) 做 OR 过滤），并按权限筛选 ====
+    rows_q = FourDBet.query.filter(FourDBet.order_code.isnot(None))
+    if ddmm_list:
+        rows_q = rows_q.filter(or_(*[FourDBet.dates.any(d) for d in ddmm_list]))
+
+    # 权限/代理筛选（明细）
     if session.get('role') == 'agent':
-        q = q.filter(Orders4D.agent_id == session['username'])
+        rows_q = rows_q.filter(FourDBet.agent_id == session['username'])
     elif selected_agent:
-        q = q.filter(Orders4D.agent_id == selected_agent)
+        rows_q = rows_q.filter(FourDBet.agent_id == selected_agent)
 
-    orders = q.order_by(Orders4D.order_date.desc(), Orders4D.order_seq.desc()).all()
+    rows = rows_q.order_by(FourDBet.created_at.asc()).all()
 
-    # 一次性拉取这些订单的明细
+    # 取这些明细对应的订单头
+    order_codes = sorted({r.order_code for r in rows if r.order_code})
+    orders_q = Orders4D.query.filter(Orders4D.order_code.in_(order_codes))
+    # 订单头也做权限筛选（防止越权）
+    if session.get('role') == 'agent':
+        orders_q = orders_q.filter(Orders4D.agent_id == session['username'])
+    elif selected_agent:
+        orders_q = orders_q.filter(Orders4D.agent_id == selected_agent)
+    orders = {o.order_code: o for o in orders_q.all()}
+
+    # 先按 order_code 汇总行
     from collections import defaultdict
+    from decimal import Decimal
+    lines_by_order = defaultdict(list)
+    for r in rows:
+        lines_by_order[r.order_code].append(r)
+
+    # === 2) 组装订单卡片，并“按 bet 的 dates”分发到每一个 dd/mm 分组 ===
     orders_by_date = defaultdict(list)
-    if orders:
-        order_codes = [o.order_code for o in orders]
-        # 明细筛选：只取这些 order_code 的行
-        rows = (FourDBet.query
-                .filter(FourDBet.order_code.in_(order_codes))
-                .order_by(FourDBet.created_at.asc())
-                .all())
+    MARKET_ORDER = "MPTSHEBKW"
 
-        # 先按 order_code 聚
-        lines_by_order = defaultdict(list)
-        for r in rows:
-            lines_by_order[r.order_code].append(r)
+    for oc, lines in lines_by_order.items():
+        o = orders.get(oc)
+        # 整单合计与状态
+        gt_total = sum(Decimal(str(r.total or "0")) for r in lines) if lines else Decimal("0")
+        win_total = sum(Decimal(str(r.win_amount or "0")) for r in lines) if lines else Decimal("0")
+        statuses = {r.status for r in lines}
+        if 'locked' in statuses:
+            order_status = 'locked'
+        elif statuses and all(s == 'delete' for s in statuses):
+            order_status = 'delete'
+        else:
+            order_status = 'active'
 
-        # 组装“订单卡片”对象，并再按日期分组
-        for o in orders:
-            lines = lines_by_order.get(o.order_code, [])
+        # 汇总 dates / markets
+        dates_set = sorted({d for r in lines for d in (r.dates or [])})
+        markets_set = {m for r in lines for m in (r.markets or [])}
+        markets_str = "".join(ch for ch in MARKET_ORDER if ch in markets_set)
 
-            # 整单合计与状态（任一 locked => locked；全部 delete => delete；否则 active）
-            from decimal import Decimal
-            gt_total = sum(Decimal(str(r.total or "0")) for r in lines) if lines else Decimal("0")
-            win_total = sum(Decimal(str(r.win_amount or "0")) for r in lines) if lines else Decimal("0")
-            statuses = {r.status for r in lines}
-            if 'locked' in statuses:
-                order_status = 'locked'
-            elif statuses and all(s == 'delete' for s in statuses):
-                order_status = 'delete'
-            else:
-                order_status = 'active'
+        order_card_base = {
+            "order_code": oc,
+            "order_date": o.order_date.strftime("%d/%m") if o and o.order_date else "",
+            "agent_id": (o.agent_id if o else (lines[0].agent_id if lines else "")),
+            "status": order_status,
+            "gt_total": float(gt_total),
+            "win_total": float(win_total),
+            "dates": dates_set,
+            "markets": markets_str,
+            "lines": lines,  # 模板里循环显示号码行
+        }
 
-            # 去重汇总：dates/markets（用于卡片头展示）
-            dates_set = sorted({d for r in lines for d in (r.dates or [])})
-            markets_set = ''.join(sorted({m for r in lines for m in (r.markets or [])}))
+        # 按“下注日期”分发到对应的 dd/mm 分组，并且只放入当前选择范围内的日期
+        for d in dates_set:
+            try:
+                d_date = datetime.strptime(d, "%d/%m").replace(year=start_date.year)
+            except ValueError:
+                continue
+            if not (start_date <= d_date <= end_date):
+                continue
 
-            order_card = {
-                "order_code": o.order_code,
-                "order_date": o.order_date.strftime("%d/%m"),
-                "agent_id": o.agent_id,
-                "status": order_status,
-                "gt_total": float(gt_total),
-                "win_total": float(win_total),
-                "dates": dates_set,
-                "markets": markets_set,
-                "lines": lines,  # 模板里可循环显示号码行（只渲染非0的B/S/A/C；IBox行加标注）
-            }
-            orders_by_date[o.order_date.strftime("%d/%m")].append(order_card)
+            # 放一个浅拷贝，避免同一对象被多天共享导致模板修改互相影响
+            od = dict(order_card_base)
+            orders_by_date[d].append(od)
 
-    # 将订单分组按日期倒序
+    # 分组日期倒序
     orders_by_date = dict(sorted(
         orders_by_date.items(),
         key=lambda x: datetime.strptime(x[0], "%d/%m"),
         reverse=True
     ))
 
-    # ==== 2) 兼容旧数据：没有 order_code 的历史行，仍按“逐行卡片”展示 ====
+    # ==== 3) 兼容旧数据：没有 order_code 的历史行 ====
     legacy_grouped = defaultdict(list)
-
     legacy_q = FourDBet.query.filter(FourDBet.order_code.is_(None))
-    # 代理筛选（明细）
     if session.get('role') == 'agent':
         legacy_q = legacy_q.filter(FourDBet.agent_id == session['username'])
     elif selected_agent:
         legacy_q = legacy_q.filter(FourDBet.agent_id == selected_agent)
 
-    legacy_rows = legacy_q.order_by(FourDBet.created_at.desc()).all()
+    if ddmm_list:
+        legacy_q = legacy_q.filter(or_(*[FourDBet.dates.any(d) for d in ddmm_list]))
 
+    legacy_rows = legacy_q.order_by(FourDBet.created_at.desc()).all()
     for r in legacy_rows:
         for d in (r.dates or []):
             try:
@@ -713,9 +735,7 @@ def history():
 
     return render_template(
         "history.html",
-        # 新结构：按日期 -> 订单卡片列表（每个卡片含 lines）
         orders_by_date=orders_by_date,
-        # 旧结构：无 order_code 的老记录按原样分组（可在模板里作为“历史旧单”区块渲染）
         legacy_grouped=legacy_grouped,
         start_date=start_date.strftime("%Y-%m-%d"),
         end_date=end_date.strftime("%Y-%m-%d"),
