@@ -952,7 +952,7 @@ def delete_bet(bet_id):
 
     return redirect(f"/history{query}")
 
-@app.route('/delete_order/<order_code>', methods=['POST'])
+@app.route('/delete_order/<path:order_code>', methods=['POST'])
 @login_required
 def delete_order(order_code):
     # 仅管理员或该订单所属代理可以删除（如果你的订单跨多个代理，这里按需放宽）
