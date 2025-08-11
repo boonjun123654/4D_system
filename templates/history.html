@@ -124,7 +124,7 @@
             {% else %}
               <form method="post"
                     style="flex:1"
-                    action="/delete_order/{{ order.order_code }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
+                    action="{{ url_for('delete_order', order_code=order.order_code) }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
                     onsubmit="return confirm('确认删除此订单？');">
                 <button type="submit" style="width:100%; padding:6px 10px; background-color:#dc3545; color:white; border:none; border-radius:6px;">
                   删除
@@ -195,7 +195,7 @@
                 {% else %}
                     <form method="post"
                           style="flex: 1"
-                          action="/delete_bet/{{ bet.id }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
+                          action="{{ url_for('delete_bet', bet_id=bet.id) }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
                           onsubmit="return confirm('确认删除此下注？');">
                         <input type="hidden" name="start_date" value="{{ start_date }}">
                         <input type="hidden" name="end_date" value="{{ end_date }}">
@@ -244,6 +244,7 @@ if (params.get("deleted") === "1") {
 history.replaceState({}, document.title, location.pathname);
 </script>
 {% endblock %}
+
 
 
 
