@@ -952,6 +952,47 @@ def delete_bet(bet_id):
 
     return redirect(f"/history{query}")
 
+@app.route('/delete_order/<order_code>', methods=['POST'])
+@login_required
+def delete_order(order_code):
+    # 仅管理员或该订单所属代理可以删除（如果你的订单跨多个代理，这里按需放宽）
+    role = session.get('role')
+    username = session.get('username')
+
+    # 找到该订单下的所有下注
+    bets = FourDBet.query.filter_by(order_code=order_code).all()
+    if not bets:
+        return redirect('/history?error=not_found')
+
+    # 权限校验：若非管理员，则只能删除自己的订单（全部下注都必须是本人）
+    if role != 'admin':
+        if any(b.agent_id != username for b in bets):
+            return redirect('/history?error=unauthorized')
+
+    # 锁注校验：若其中任意一条已锁注，则整单不允许删除
+    if any(b.status == 'locked' for b in bets):
+        return redirect('/history?error=locked')
+
+    # 执行整单删除（标记为 delete）
+    for b in bets:
+        b.status = 'delete'
+    db.session.commit()
+
+    # 保留查询参数
+    start = request.args.get("start_date")
+    end = request.args.get("end_date")
+    agent = request.args.get("agent_id")
+
+    query = "?deleted=1"
+    if start:
+        query += f"&start_date={start}"
+    if end:
+        query += f"&end_date={end}"
+    if agent:
+        query += f"&agent_id={agent}"
+
+    return redirect(f"/history{query}")
+
 def generate_order_code_and_create_order(agent_id: str) -> str:
     """原子获取当日唯一流水号，返回订单号，并写入 orders_4d。"""
     tz = timezone('Asia/Kuala_Lumpur')
