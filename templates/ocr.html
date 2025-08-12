@@ -64,7 +64,7 @@
   </details>
 </div>
 
-<script src="https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="/static/tesseract/tesseract.min.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const logBox = $('log');
@@ -90,13 +90,20 @@ function initWorker(){
   workerPromise = (async () => {
     setStatus('初始化 OCR…','warn'); progress(5);
     const worker = await Tesseract.createWorker({
-      logger: m => { log(m); if (m.status==='recognizing text' && m.progress) progress(5 + Math.floor(m.progress*90)); },
-      workerPath: 'https://unpkg.com/tesseract.js@5.1.1/dist/worker.min.js',
-      corePath:   'https://unpkg.com/tesseract.js-core@5.1.0/tesseract-core.wasm.js',
-      langPath:   'https://tessdata.projectnaptha.com/4.0.0'  // 语言包目录
+      // ✅ 指向你刚放进 /static 的文件
+      workerPath: '/static/tesseract/worker.min.js',
+      corePath:   '/static/tesseract/tesseract-core.wasm.js',
+      langPath:   '/static/tesseract/lang',      // 这个目录里放 eng.traineddata.gz
+      logger: m => {
+        log(m);
+        if (m.status === 'recognizing text' && m.progress) {
+          progress(5 + Math.floor(m.progress * 90));
+        }
+      }
     });
-    await worker.loadLanguage('eng');   log('Language loaded: eng'); progress(10);
-    await worker.initialize('eng');     log('Worker initialized');    progress(15);
+
+    await worker.loadLanguage('eng');      log('Language loaded: eng'); progress(10);
+    await worker.initialize('eng');        log('Worker initialized');    progress(15);
     await worker.setParameters({
       tessedit_char_whitelist: '0123456789',
       tessedit_pageseg_mode: '6',
@@ -104,9 +111,13 @@ function initWorker(){
       preserve_interword_spaces: '1',
       user_defined_dpi: '300'
     });
-    setStatus('OCR 就绪'); progress(20);
+    progress(20);
+    setStatus('OCR 就绪');
     return worker;
-  })().catch(err => { setStatus('OCR 初始化失败','err'); log(err); throw err; });
+  })().catch(err => {
+    setStatus('OCR 初始化失败','err'); log(err);
+    throw err;
+  });
   return workerPromise;
 }
 
