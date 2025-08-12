@@ -64,15 +64,14 @@
   </details>
 </div>
 
-<!-- 使用 CDN（若 CSP 受限，请按我们之前的方案B放宽 CSP 或改用本地托管） -->
-<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const logBox = $('log');
-function log(msg){ logBox.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg)) + "\\n"; }
+function log(m){ logBox.textContent += (typeof m==='string'?m:JSON.stringify(m)) + '\n'; }
 function setStatus(text, type='ok'){
   const map = { ok:'badge-ok', warn:'badge-warn', err:'badge-err' };
-  $('status').innerHTML = '<span class="badge '+(map[type]||map.ok)+'">'+ text +'</span>';
+  $('status').innerHTML = `<span class="badge ${map[type]||map.ok}">${text}</span>`;
 }
 function progress(p){ $('bar').style.width = Math.max(0, Math.min(100, p)) + '%'; }
 
@@ -85,20 +84,19 @@ const ROI = {
   consolation: { x: 0.059743954480796585, y: 0.58858858858858850, w: 0.8790896159317212, h: 0.16966966966966968 }
 };
 
-// ====== Tesseract 全局 worker：只初始化一次 ======
 let workerPromise;
 function initWorker(){
   if (workerPromise) return workerPromise;
   workerPromise = (async () => {
     setStatus('初始化 OCR…','warn'); progress(5);
     const worker = await Tesseract.createWorker({
-      logger: m => {
-        log(m);
-        if (m.status === 'recognizing text' && m.progress) progress(5 + Math.floor(m.progress*90));
-      }
+      logger: m => { log(m); if (m.status==='recognizing text' && m.progress) progress(5 + Math.floor(m.progress*90)); },
+      workerPath: 'https://unpkg.com/tesseract.js@5.1.1/dist/worker.min.js',
+      corePath:   'https://unpkg.com/tesseract.js-core@5.1.0/tesseract-core.wasm.js',
+      langPath:   'https://tessdata.projectnaptha.com/4.0.0'  // 语言包目录
     });
-    await worker.loadLanguage('eng');          log('Language loaded: eng'); progress(10);
-    await worker.initialize('eng');            log('Worker initialized');    progress(15);
+    await worker.loadLanguage('eng');   log('Language loaded: eng'); progress(10);
+    await worker.initialize('eng');     log('Worker initialized');    progress(15);
     await worker.setParameters({
       tessedit_char_whitelist: '0123456789',
       tessedit_pageseg_mode: '6',
@@ -106,13 +104,9 @@ function initWorker(){
       preserve_interword_spaces: '1',
       user_defined_dpi: '300'
     });
-    progress(20);
-    setStatus('OCR 就绪');
+    setStatus('OCR 就绪'); progress(20);
     return worker;
-  })().catch(err => {
-    setStatus('OCR 初始化失败','err'); log(err);
-    throw err;
-  });
+  })().catch(err => { setStatus('OCR 初始化失败','err'); log(err); throw err; });
   return workerPromise;
 }
 
@@ -234,6 +228,11 @@ $('btnSave').addEventListener('click', async () => {
   }catch(e){
     setStatus('保存异常（详见日志）','err'); log(e && (e.stack||e.message||e));
   }
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  $('draw_date').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 });
 </script>
 {% endblock %}
