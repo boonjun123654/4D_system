@@ -93,7 +93,7 @@ function initWorker(){
       // ✅ 指向你刚放进 /static 的文件
       workerPath: '/static/tesseract/worker.min.js',
       corePath:   '/static/tesseract/tesseract-core.wasm.js',
-      langPath:   '/static/tesseract/lang',      // 这个目录里放 eng.traineddata.gz
+      langPath:   '/static/tesseract/lang/',      // 这个目录里放 eng.traineddata.gz
       logger: m => {
         log(m);
         if (m.status === 'recognizing text' && m.progress) {
