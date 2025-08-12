@@ -34,16 +34,39 @@ login_attempts = {}
 
 csp = {
     'default-src': "'self'",
-    'script-src': ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"],
-    'worker-src': ["'self'", "blob:"],
-    'connect-src': ["'self'", "blob:", "data:", "https://unpkg.com", "https://cdn.jsdelivr.net"],
-    'img-src': ["'self'", "data:", "blob:"],
-    'style-src': ["'self'", "'unsafe-inline'"],
+    # 允许加载 CDN 的 tesseract.min.js；WASM 需要 'wasm-unsafe-eval'
+    'script-src': [
+        "'self'",
+        "'unsafe-inline'",
+        "'wasm-unsafe-eval'",
+        "https://unpkg.com",
+        "https://cdn.jsdelivr.net"
+    ],
+    # Tesseract 在浏览器里用 WebWorker，来源需要放开 blob:
+    'worker-src': [
+        "'self'",
+        "blob:"
+    ],
+    # 语言包、worker、wasm 以及 blob/data 的网络请求
+    'connect-src': [
+        "'self'",
+        "blob:",
+        "data:",
+        "https://unpkg.com",
+        "https://cdn.jsdelivr.net"
+    ],
+    # 允许本地图片/拖拽/粘贴（blob:/data:）
+    'img-src': [
+        "'self'",
+        "data:",
+        "blob:"
+    ],
+    'style-src': [
+        "'self'",
+        "'unsafe-inline'"
+    ],
     'frame-ancestors': "'none'",
 }
-
-MY_TZ = pytz_tz('Asia/Kuala_Lumpur')
-
 Talisman(app,
     content_security_policy=csp,
     force_https=True,
@@ -52,6 +75,8 @@ Talisman(app,
     strict_transport_security_include_subdomains=True,
     frame_options='DENY'
 )
+
+MY_TZ = pytz_tz('Asia/Kuala_Lumpur')
 
 MAX_ATTEMPTS = 5
 LOCKOUT_MINUTES = 10
