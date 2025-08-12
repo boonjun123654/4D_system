@@ -34,39 +34,28 @@ login_attempts = {}
 
 csp = {
     'default-src': "'self'",
-    # 允许加载 CDN 的 tesseract.min.js；WASM 需要 'wasm-unsafe-eval'
     'script-src': [
-        "'self'",
-        "'unsafe-inline'",
-        "'wasm-unsafe-eval'",
-        "https://unpkg.com",
-        "https://cdn.jsdelivr.net"
+        "'self'", "'unsafe-inline'", "'wasm-unsafe-eval'",
+        "https://unpkg.com", "https://cdn.jsdelivr.net"
     ],
-    # Tesseract 在浏览器里用 WebWorker，来源需要放开 blob:
     'worker-src': [
-        "'self'",
-        "blob:"
+        "'self'", "blob:"
     ],
-    # 语言包、worker、wasm 以及 blob/data 的网络请求
     'connect-src': [
-        "'self'",
-        "blob:",
-        "data:",
+        "'self'", "blob:", "data:",
         "https://unpkg.com",
-        "https://cdn.jsdelivr.net"
+        "https://cdn.jsdelivr.net",
+        "https://tessdata.projectnaptha.com"   # ⬅️ 必须：语言包域名
     ],
-    # 允许本地图片/拖拽/粘贴（blob:/data:）
     'img-src': [
-        "'self'",
-        "data:",
-        "blob:"
+        "'self'", "data:", "blob:"
     ],
     'style-src': [
-        "'self'",
-        "'unsafe-inline'"
+        "'self'", "'unsafe-inline'"
     ],
     'frame-ancestors': "'none'",
 }
+
 Talisman(app,
     content_security_policy=csp,
     force_https=True,
