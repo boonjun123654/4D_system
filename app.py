@@ -913,66 +913,117 @@ def logout():
     return redirect('/login')
 
 @app.route('/ocr')
+@login_required
 def ocr_page():
     if session.get('role') != 'admin':
         return redirect('/')
     return render_template('ocr.html')
 
 @app.route('/admin/save_draw', methods=['POST'])
+@login_required
 def save_draw():
     if session.get('role') != 'admin':
         return jsonify({"ok": False, "error": "unauthorized"}), 403
 
-    data = request.get_json(force=True)
-    date_str = data.get('date')            # 'YYYY-MM-DD'
-    market   = data.get('market', 'M')
+    try:
+        data = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid json"}), 400
+
+    date_str = (data.get('date') or '').strip()            # 'YYYY-MM-DD'
+    market   = (data.get('market') or 'M').strip().upper()
     first    = (data.get('first') or '').strip()
     second   = (data.get('second') or '').strip()
     third    = (data.get('third') or '').strip()
-    special  = (data.get('special') or '').replace(' ', '')
-    consol   = (data.get('consolation') or '').replace(' ', '')
+    special  = (data.get('special') or '')
+    consol   = (data.get('consolation') or '')
 
-    # 基础校验
-    is4 = lambda s: s.isdigit() and len(s)==4
+    # 1) 基础与白名单校验
+    MARKET_SET = set(list("MPTSHEBKW"))
+    if market not in MARKET_SET:
+        return jsonify({"ok": False, "error": "invalid market"}), 400
+
+    is4 = lambda s: s.isdigit() and len(s) == 4
     if not (date_str and is4(first) and is4(second) and is4(third)):
-        return jsonify({"ok": False, "error": "invalid numbers"}), 400
+        return jsonify({"ok": False, "error": "invalid 1st/2nd/3rd"}), 400
 
-    sp = [x for x in special.split(',') if x]
-    co = [x for x in consol.split(',') if x]
-    if len(sp)!=10 or len(co)!=10 or any(not is4(x) for x in sp+co):
-        return jsonify({"ok": False, "error": "special/consolation must be 10x 4-digits"}), 400
+    # 2) 规范化 & 强校验（全角->半角，去空格，去重，必须10个不重复4位数）
+    def canon_list(s: str):
+        # 全角逗号/空白 -> 半角逗号；移除空格；拆分
+        s = s.replace('，', ',').replace('、', ',').replace('；', ',').replace(';', ',')
+        s = s.replace(' ', '')
+        items = [x for x in s.split(',') if x]
+        # 只保留4位数字，去重并按原序保留前10个
+        seen, out = set(), []
+        for x in items:
+            x = ''.join(ch for ch in x if ch.isdigit())
+            if is4(x) and x not in seen:
+                seen.add(x); out.append(x)
+            if len(out) == 10:
+                break
+        return out
 
-    # 统一存储日期（你项目里 DrawResult4D.date 是 datetime）
-    d = datetime.strptime(date_str, "%Y-%m-%d").date()
-    dt_naive = datetime(d.year, d.month, d.day)   # 先 naive
-    dt_val = MY_TZ.localize(dt_naive)            # 再本地化
+    sp = canon_list(special)
+    co = canon_list(consol)
+    if len(sp) != 10 or len(co) != 10:
+        return jsonify({"ok": False, "error": "special/consolation need 10 unique 4-digit each"}), 400
 
-    # 去重（当天 + market）
-    rec = DrawResult4D.query.filter(
-        func.date(DrawResult4D.date) == d,
-        DrawResult4D.market == market
-    ).first()
+    # 不允许将 1/2/3 放进特/慰（避免重复）
+    top3 = {first, second, third}
+    if any(x in top3 for x in sp) or any(x in top3 for x in co):
+        return jsonify({"ok": False, "error": "top prizes must not appear in special/consolation"}), 400
 
-    if rec:
-        rec.first = first
-        rec.second = second
-        rec.third = third
-        rec.special = ",".join(sp)          # 确保无空格
-        rec.consolation = ",".join(co)
-    else:
-        rec = DrawResult4D(
-            date=dt_val,
-            market=market,
-            first=first,
-            second=second,
-            third=third,
-            special=",".join(sp),
-            consolation=",".join(co)
-        )
-        db.session.add(rec)
+    # 3) 组装 datetime（MY_TZ 本地化）
+    try:
+        d = datetime.strptime(date_str, "%Y-%m-%d").date()
+        dt_naive = datetime(d.year, d.month, d.day)
+        dt_val = MY_TZ.localize(dt_naive)
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid date"}), 400
 
-    db.session.commit()
-    return jsonify({"ok": True})
+    # 4) 幂等写入（推荐在 DB 层有唯一约束: UNIQUE (date, market)）
+    try:
+        rec = DrawResult4D.query.filter(
+            func.date(DrawResult4D.date) == d,
+            DrawResult4D.market == market
+        ).with_for_update(read=True).first()  # 防并发：需要在事务中
+
+        if rec:
+            rec.first = first
+            rec.second = second
+            rec.third = third
+            rec.special = ",".join(sp)
+            rec.consolation = ",".join(co)
+        else:
+            rec = DrawResult4D(
+                date=dt_val,
+                market=market,
+                first=first,
+                second=second,
+                third=third,
+                special=",".join(sp),
+                consolation=",".join(co)
+            )
+            db.session.add(rec)
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": f"db error: {type(e).__name__}"}), 500
+
+    # 5) 返回落库结果
+    return jsonify({
+        "ok": True,
+        "data": {
+            "date": date_str,
+            "market": market,
+            "first": first,
+            "second": second,
+            "third": third,
+            "special": ",".join(sp),
+            "consolation": ",".join(co),
+        }
+    })
 
 @app.route('/admin/draw_input', methods=['GET', 'POST'])
 def admin_draw_input():
