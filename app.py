@@ -12,7 +12,7 @@ from werkzeug.security import generate_password_hash,check_password_hash
 from functools import wraps
 from decimal import Decimal
 import pytesseract
-from pytz import timezone
+from pytz import timezone as pytz_tz
 from PIL import Image
 from werkzeug.utils import secure_filename
 from captcha.image import ImageCaptcha
@@ -42,6 +42,8 @@ csp = {
     'frame-ancestors': "'none'"
 }
 
+MY_TZ = pytz_tz('Asia/Kuala_Lumpur')
+
 Talisman(app,
     content_security_policy=csp,
     force_https=True,
@@ -59,7 +61,7 @@ with app.app_context():
     db.create_all()
 
 def lock_today_bets():
-    now = datetime.now(timezone('Asia/Kuala_Lumpur'))
+    now = datetime.now(MY_TZ)
     today_str = now.strftime("%d/%m")
     print(f"[DEBUG] 今天日期: {today_str}")
     bets = FourDBet.query.filter(FourDBet.dates.any(today_str), FourDBet.status == 'active').all()
@@ -83,7 +85,8 @@ def login_required(view_func):
 
 @app.before_request
 def enforce_https_in_render():
-    """Render 自动注入 X-Forwarded-Proto 头，值为 'http' 或 'https'"""
+    if app.debug or os.environ.get("FLASK_ENV") == "development":
+        return  # 本地不跳
     if request.headers.get('X-Forwarded-Proto', 'http') != 'https':
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
@@ -115,7 +118,7 @@ def generate_captcha():
 @app.route('/bet', methods=['GET', 'POST'])
 @login_required
 def bet():
-    malaysia = timezone('Asia/Kuala_Lumpur')
+    malaysia = pytz_tz('Asia/Kuala_Lumpur')
     now = datetime.now(malaysia)
     date_today = now.date()
     results = []
@@ -126,7 +129,7 @@ def bet():
         agents = []
 
     if request.method == 'POST':
-        now = datetime.now(timezone('Asia/Kuala_Lumpur'))
+        now = datetime.now(pytz_tz('Asia/Kuala_Lumpur'))
         today_str = now.strftime('%d/%m')
         selected_dates = set()
 
@@ -283,10 +286,15 @@ def process_winning():
     # 删除旧记录，避免重复
     WinningRecord4D.query.filter_by(draw_date=selected_dt).delete()
 
-    all_results = DrawResult4D.query.filter_by(date=date_str).all()
+    all_results = (
+        DrawResult4D.query
+        .filter(func.date(DrawResult4D.date) == selected_dt)  # 关键
+        .all()
+    )
     result_map = defaultdict(dict)
     for r in all_results:
-        result_map[r.date.strftime("%Y-%m-%d")][r.market] = {
+        key = r.date.strftime("%Y-%m-%d")
+        result_map[key][r.market] = {
             "1st": r.first,
             "2nd": r.second,
             "3rd": r.third,
@@ -615,7 +623,7 @@ def report():
 @app.route('/history')
 @login_required
 def history():
-    tz = timezone('Asia/Kuala_Lumpur')
+    tz = pytz_tz('Asia/Kuala_Lumpur')
     now = datetime.now(tz)
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
@@ -794,7 +802,7 @@ def update_agent_password(agent_id):
     new_pw = request.form.get('new_password')
     agent = Agent4D.query.get(agent_id)
     if agent and new_pw:
-        agent.password = new_pw
+        agent.password = generate_password_hash(new_pw)
         db.session.commit()
         return redirect(f"/admin/agents?pw_updated={agent.username}")
     else:
@@ -904,24 +912,67 @@ def logout():
     session.clear()
     return redirect('/login')
 
-@app.route('/admin/ocr', methods=['GET', 'POST'])
-def ocr_upload():
+@app.route('/ocr')
+def ocr_page():
     if session.get('role') != 'admin':
         return redirect('/')
+    return render_template('ocr.html')
 
-    results = ""
-    if request.method == 'POST':
-        image = request.files.get('image')
-        if image:
-            filename = secure_filename(image.filename)
-            filepath = os.path.join('uploads', filename)
-            image.save(filepath)
+@app.route('/admin/save_draw', methods=['POST'])
+def save_draw():
+    if session.get('role') != 'admin':
+        return jsonify({"ok": False, "error": "unauthorized"}), 403
 
-            # OCR 识别
-            text = pytesseract.image_to_string(Image.open(filepath), lang='eng')
-            results = text.strip()
+    data = request.get_json(force=True)
+    date_str = data.get('date')            # 'YYYY-MM-DD'
+    market   = data.get('market', 'M')
+    first    = (data.get('first') or '').strip()
+    second   = (data.get('second') or '').strip()
+    third    = (data.get('third') or '').strip()
+    special  = (data.get('special') or '').replace(' ', '')
+    consol   = (data.get('consolation') or '').replace(' ', '')
 
-    return render_template('admin_ocr_upload.html', results=results)
+    # 基础校验
+    is4 = lambda s: s.isdigit() and len(s)==4
+    if not (date_str and is4(first) and is4(second) and is4(third)):
+        return jsonify({"ok": False, "error": "invalid numbers"}), 400
+
+    sp = [x for x in special.split(',') if x]
+    co = [x for x in consol.split(',') if x]
+    if len(sp)!=10 or len(co)!=10 or any(not is4(x) for x in sp+co):
+        return jsonify({"ok": False, "error": "special/consolation must be 10x 4-digits"}), 400
+
+    # 统一存储日期（你项目里 DrawResult4D.date 是 datetime）
+    d = datetime.strptime(date_str, "%Y-%m-%d").date()
+    dt_naive = datetime(d.year, d.month, d.day)   # 先 naive
+    dt_val = MY_TZ.localize(dt_naive)            # 再本地化
+
+    # 去重（当天 + market）
+    rec = DrawResult4D.query.filter(
+        func.date(DrawResult4D.date) == d,
+        DrawResult4D.market == market
+    ).first()
+
+    if rec:
+        rec.first = first
+        rec.second = second
+        rec.third = third
+        rec.special = ",".join(sp)          # 确保无空格
+        rec.consolation = ",".join(co)
+    else:
+        rec = DrawResult4D(
+            date=dt_val,
+            market=market,
+            first=first,
+            second=second,
+            third=third,
+            special=",".join(sp),
+            consolation=",".join(co)
+        )
+        db.session.add(rec)
+
+    db.session.commit()
+    return jsonify({"ok": True})
 
 @app.route('/admin/draw_input', methods=['GET', 'POST'])
 def admin_draw_input():
@@ -938,16 +989,37 @@ def admin_draw_input():
             consolation = request.form.get(f'consolation_{market}')
 
             if date and (first or second or third or special or consolation):
-                result = DrawResult4D(
-                    date=date,
-                    market=market,
-                    first=first or None,
-                    second=second or None,
-                    third=third or None,
-                    special=special or None,
-                    consolation=consolation or None
-                )
-                db.session.add(result)
+                try:
+                    d = datetime.strptime(date, "%Y-%m-%d").date()
+                    dt_naive = datetime(d.year, d.month, d.day)
+                    dt_val = MY_TZ.localize(dt_naive)
+                except Exception:
+                    continue
+
+                # 若已有同日同 market，改为更新（避免重复）
+                rec = DrawResult4D.query.filter(
+                    func.date(DrawResult4D.date) == d,
+                    DrawResult4D.market == market
+                ).first()
+
+                if rec:
+                    rec.first = first or rec.first
+                    rec.second = second or rec.second
+                    rec.third = third or rec.third
+                    rec.special = special or rec.special
+                    rec.consolation = consolation or rec.consolation
+                else:
+                    rec = DrawResult4D(
+                        date=dt_val,
+                        market=market,
+                        first=first or None,
+                        second=second or None,
+                        third=third or None,
+                        special=special or None,
+                        consolation=consolation or None
+                    )
+                    db.session.add(rec)
+
         db.session.commit()
         flash("✅ 成功上传开奖成绩")
         return redirect('/admin/draw_input')
@@ -1027,7 +1099,7 @@ def delete_order(order_code):
 
 def generate_order_code_and_create_order(agent_id: str) -> str:
     """原子获取当日唯一流水号，返回订单号，并写入 orders_4d。"""
-    tz = timezone('Asia/Kuala_Lumpur')
+    tz = pytz_tz('Asia/Kuala_Lumpur')
     today = datetime.now(tz).date()  # 注意用马来西亚日期做日序号
     # 原子自增 last_seq 并返回
     seq_sql = text("""
