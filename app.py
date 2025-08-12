@@ -34,12 +34,12 @@ login_attempts = {}
 
 csp = {
     'default-src': "'self'",
-    'script-src': ["'self'", "'unsafe-inline'"],
+    'script-src': ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"],
+    'worker-src': ["'self'", "blob:"],
+    'connect-src': ["'self'", "blob:", "data:", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+    'img-src': ["'self'", "data:", "blob:"],
     'style-src': ["'self'", "'unsafe-inline'"],
-    'img-src': ["'self'", "data:"],
-    'font-src': "'self'",
-    'connect-src': "'self'",
-    'frame-ancestors': "'none'"
+    'frame-ancestors': "'none'",
 }
 
 MY_TZ = pytz_tz('Asia/Kuala_Lumpur')
