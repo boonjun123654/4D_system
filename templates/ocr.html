@@ -91,8 +91,8 @@ function initWorker(){
     setStatus('初始化 OCR…','warn'); progress(5);
     const worker = await Tesseract.createWorker({
       // ✅ 指向你刚放进 /static 的文件
-      workerPath: '/static/tesseract/worker.min.js',
-      corePath:   '/static/tesseract/tesseract-core.wasm.js',
+      workerPath: '/static/tesseract/worker.min.js?v=511',
+      corePath:   '/static/tesseract/tesseract-core.wasm.js?v=511',
       langPath:   '/static/tesseract/lang/',      // 这个目录里放 eng.traineddata.gz
       logger: m => {
         log(m);
