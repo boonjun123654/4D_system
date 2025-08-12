@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>📷 OCR 识别当期成绩（Magnum）</h2>
+
+<div style="margin:12px 0; display:flex; gap:10px; align-items:center;">
+  <label>开奖日期：</label>
+  <input type="date" id="draw_date" required>
+  <label>Market：</label>
+  <select id="market" required>
+    <option value="M">M</option>
+    <option value="P">P</option>
+    <option value="T">T</option>
+    <option value="S">S</option>
+    <option value="H">H</option>
+    <option value="E">E</option>
+    <option value="B">B</option>
+    <option value="K">K</option>
+    <option value="W">W</option>
+  </select>
+</div>
+
+<input type="file" id="img" accept="image/*">
+<button id="btnOcr" style="margin-left:8px;">开始识别</button>
+<span id="status" style="margin-left:10px;color:#666;"></span>
+
+<div id="preview" style="margin-top:16px; display:none;">
+  <h3>识别结果预览</h3>
+  <div style="display:grid; grid-template-columns: 120px 1fr; gap:8px; align-items:center;">
+    <div>1st:</div> <input id="first" maxlength="4">
+    <div>2nd:</div> <input id="second" maxlength="4">
+    <div>3rd:</div> <input id="third" maxlength="4">
+    <div>Special(10):</div> <input id="special" placeholder="2006,7652,5588,0653,3611,3357,8643,6444,3588,1762">
+    <div>Consolation(10):</div> <input id="consolation" placeholder="7868,2714,5699,2317,9134,6564,9034,7952,2044,6534">
+  </div>
+  <button id="btnSave" style="margin-top:12px;">保存到数据库</button>
+</div>
+
+<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+
+function only4d(arr){
+  // 只保留4位纯数字
+  return arr.map(s => (s||'').replace(/\D/g,'')).filter(s => s.length===4);
+}
+function normList(arr, need=10){
+  // 取前 need 个，拼成“逗号+无空格”
+  const a = only4d(arr).slice(0, need);
+  return a.join(',');
+}
+function extractByHeuristics(fullText){
+  // 统一大小写与分隔
+  const text = fullText.replace(/\s+/g,' ').trim();
+
+  // 通用：先抓到所有4位数
+  const all4d = text.match(/\b\d{4}\b/g) || [];
+
+  // 尝试从关键词附近提取
+  function near(label, n=1){
+    const i = text.toLowerCase().indexOf(label.toLowerCase());
+    if(i<0) return [];
+    // 在关键词附近抓最多 n 个 4位数
+    const around = text.slice(Math.max(0,i-120), i+200);
+    return (around.match(/\b\d{4}\b/g) || []).slice(0, n);
+  }
+
+  let first  = near('1st',1)[0]  || near('1 st',1)[0];
+  let second = near('2nd',1)[0]  || near('2 nd',1)[0];
+  let third  = near('3rd',1)[0]  || near('3 rd',1)[0];
+
+  // 如果关键字策略失败，就按全局顺序兜底
+  if(!first || !second || !third){
+    if(all4d.length >= 3){
+      first  = first  || all4d[0];
+      second = second || all4d[1];
+      third  = third  || all4d[2];
+    }
+  }
+
+  // Special/Consolation
+  const specialBlockIdx = text.toLowerCase().indexOf('special');
+  const consolBlockIdx  = text.toLowerCase().indexOf('consolation');
+
+  let specials = [], consols = [];
+  if(specialBlockIdx>=0){
+    const seg = text.slice(specialBlockIdx, consolBlockIdx>0?consolBlockIdx:specialBlockIdx+800);
+    specials = seg.match(/\b\d{4}\b/g) || [];
+  }
+  if(consolBlockIdx>=0){
+    const seg = text.slice(consolBlockIdx, consolBlockIdx+800);
+    consols = seg.match(/\b\d{4}\b/g) || [];
+  }
+
+  // 兜底：如果 special/consolation 不够，从剩余号码中补齐（但不与 1/2/3 重复）
+  const used = new Set([first, second, third].filter(Boolean));
+  const rest = all4d.filter(x => !used.has(x));
+
+  if(specials.length < 10){
+    const add = rest.filter(x => specials.indexOf(x)<0).slice(0, 10 - specials.length);
+    specials = specials.concat(add);
+  }
+  if(consols.length < 10){
+    const used2 = new Set([...used, ...specials]);
+    const add = rest.filter(x => !used2.has(x)).slice(0, 10 - consols.length);
+    consols = consols.concat(add);
+  }
+
+  return {
+    first: first || '',
+    second: second || '',
+    third: third || '',
+    special: normList(specials, 10),
+    consolation: normList(consols, 10),
+  };
+}
+
+$('btnOcr').addEventListener('click', async () => {
+  const file = $('img').files?.[0];
+  if(!file){ alert('请先选择开奖截图'); return; }
+  if(!$('draw_date').value){ alert('请选择开奖日期'); return; }
+
+  $('status').textContent = '识别中…(取决于图片清晰度)';
+  const worker = await Tesseract.createWorker('eng', 1, { logger: m => {} });
+  const { data: { text } } = await worker.recognize(file);
+  await worker.terminate();
+
+  const result = extractByHeuristics(text);
+  $('first').value = result.first;
+  $('second').value = result.second;
+  $('third').value = result.third;
+  $('special').value = result.special;           // 逗号+无空格
+  $('consolation').value = result.consolation;   // 逗号+无空格
+
+  $('preview').style.display = 'block';
+  $('status').textContent = '识别完成，请核对后保存';
+});
+
+$('btnSave').addEventListener('click', async () => {
+  const payload = {
+    date: $('draw_date').value,
+    market: $('market').value,
+    first: $('first').value.trim(),
+    second: $('second').value.trim(),
+    third: $('third').value.trim(),
+    special: $('special').value.replace(/\s+/g,''),         // 保证无空格
+    consolation: $('consolation').value.replace(/\s+/g,'')  // 保证无空格
+  };
+  // 基本校验
+  const is4 = s => /^\d{4}$/.test(s);
+  if(!is4(payload.first) || !is4(payload.second) || !is4(payload.third)){
+    alert('1st/2nd/3rd 必须为4位数字'); return;
+  }
+  const sp = payload.special.split(',').filter(Boolean);
+  const co = payload.consolation.split(',').filter(Boolean);
+  if(sp.length!==10 || co.length!==10 || sp.some(x=>!is4(x)) || co.some(x=>!is4(x))){
+    alert('Special/Consolation 必须各10个4位数，逗号分隔且无空格'); return;
+  }
+
+  const res = await fetch('/admin/save_draw', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if(data.ok){
+    alert('✅ 保存成功');
+  }else{
+    alert('❌ 保存失败：' + (data.error || 'unknown'));
+  }
+});
+</script>
+{% endblock %}
+
