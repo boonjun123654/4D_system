@@ -1,109 +1,82 @@
 {% extends "layout.html" %}
 {% block content %}
-<h2>OCR 识别当期成绩</h2>
+<style>
+  .card{max-width:920px;margin:18px auto;padding:18px;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.05)}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .btn{padding:8px 14px;border:1px solid #d1d5db;border-radius:10px;background:#111827;color:#fff;cursor:pointer}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .input, select{padding:8px 10px;border:1px solid #d1d5db;border-radius:10px}
+  .status{margin-left:10px;font-size:14px}
+  .badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;margin-left:6px}
+  .badge-ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+  .badge-warn{background:#fef9c3;color:#92400e;border:1px solid #fde68a}
+  .badge-err{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+  .grid{display:grid;grid-template-columns:140px 1fr;gap:10px;align-items:center}
+  .hint{color:#6b7280;font-size:12px}
+  .dropzone{border:2px dashed #cbd5e1;border-radius:12px;padding:16px;text-align:center;color:#64748b}
+  .dropzone.drag{background:#f8fafc;border-color:#94a3b8}
+  .progress{height:6px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+  .progress>div{height:100%;width:0;background:#0ea5e9;transition:width .2s}
+  details.log{margin-top:14px;border:1px solid #e5e7eb;border-radius:10px;padding:10px}
+  details.log summary{cursor:pointer}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;font-size:12px}
+</style>
 
-<div style="margin:12px 0; display:flex; gap:10px; align-items:center;">
-  <label>开奖日期：</label>
-  <input type="date" id="draw_date" required>
-  <label>Market：</label>
-  <select id="market" required>
-    <option value="M">M</option>
-    <option value="P">P</option>
-    <option value="T">T</option>
-    <option value="S">S</option>
-    <option value="H">H</option>
-    <option value="E">E</option>
-    <option value="B">B</option>
-    <option value="K">K</option>
-    <option value="W">W</option>
-  </select>
-</div>
-
-<input type="file" id="img" accept="image/*">
-<button id="btnOcr" style="margin-left:8px;">开始识别</button>
-<span id="status" style="margin-left:10px;color:#666;"></span>
-
-<div id="preview" style="margin-top:16px; display:none;">
-  <h3>识别结果预览</h3>
-  <div style="display:grid; grid-template-columns: 120px 1fr; gap:8px; align-items:center;">
-    <div>1st:</div> <input id="first" maxlength="4">
-    <div>2nd:</div> <input id="second" maxlength="4">
-    <div>3rd:</div> <input id="third" maxlength="4">
-    <div>Special(10):</div> <input id="special" placeholder="2006,7652,5588,0653,3611,3357,8643,6444,3588,1762">
-    <div>Consolation(10):</div> <input id="consolation" placeholder="7868,2714,5699,2317,9134,6564,9034,7952,2044,6534">
+<div class="card">
+  <h2 style="margin:0 0 8px 0">OCR 识别当期成绩</h2>
+  <div class="row" style="margin:8px 0">
+    <label>开奖日期：</label>
+    <input type="date" id="draw_date" class="input" required>
+    <label>Market：</label>
+    <select id="market" class="input" required>
+      <option value="M">M</option><option value="P">P</option><option value="T">T</option>
+      <option value="S">S</option><option value="H">H</option><option value="E">E</option>
+      <option value="B" selected>B</option><option value="K">K</option><option value="W">W</option>
+    </select>
   </div>
-  <button id="btnSave" style="margin-top:12px;">保存到数据库</button>
+
+  <div class="row" style="margin:8px 0">
+    <input type="file" id="img" accept="image/*" class="input">
+    <button id="btnOcr" class="btn">开始识别</button>
+    <button id="btnSave" class="btn" disabled>保存到数据库</button>
+    <span id="status" class="status"></span>
+  </div>
+
+  <div id="dz" class="dropzone">拖拽图片到这里，或点击上面的「Choose File」。也支持直接 Ctrl+V 粘贴截图。</div>
+
+  <div style="margin:10px 0" class="progress"><div id="bar"></div></div>
+
+  <div id="preview" style="margin-top:10px; display:none;">
+    <h3 style="margin:6px 0 8px 0">识别结果</h3>
+    <div class="grid">
+      <div>1st：</div> <input id="first" maxlength="4" class="input" style="max-width:220px">
+      <div>2nd：</div> <input id="second" maxlength="4" class="input" style="max-width:220px">
+      <div>3rd：</div> <input id="third" maxlength="4" class="input" style="max-width:220px">
+      <div>Special(10)：</div> <input id="special" class="input" placeholder="10个4位数，以逗号分隔，无空格">
+      <div>Consolation(10)：</div> <input id="consolation" class="input" placeholder="10个4位数，以逗号分隔，无空格">
+    </div>
+    <div class="hint" style="margin-top:6px">提示：可在这里手动修正数字后再保存。</div>
+  </div>
+
+  <details class="log" open>
+    <summary>运行日志 / 错误</summary>
+    <div id="log" class="mono"></div>
+  </details>
 </div>
 
+<!-- 使用 CDN（若 CSP 受限，请按我们之前的方案B放宽 CSP 或改用本地托管） -->
 <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-
-// === 1) 全局 worker：只创建一次 ===
-let workerReady = (async () => {
-  const worker = await Tesseract.createWorker();
-  await worker.loadLanguage('eng');
-  await worker.initialize('eng');
-  // 只认数字、行块级解析、更像票据的排列
-  await worker.setParameters({
-    tessedit_char_whitelist: '0123456789',
-    tessedit_char_blacklist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-    tessedit_pageseg_mode: '6',               // 6: Assume a single uniform block of text
-    classify_bln_numeric_mode: '1',           // 数字模式
-    preserve_interword_spaces: '1',
-    user_defined_dpi: '300'
-  });
-  return worker;
-})();
-
-// === 2) 预处理：缩放、灰度、二值化、去噪 ===
-async function preprocess(file) {
-  const bmp = await createImageBitmap(file);
-  const maxW = 1400;
-  const scale = Math.min(1, maxW / bmp.width);
-  const w = Math.round(bmp.width * scale);
-  const h = Math.round(bmp.height * scale);
-
-  const cv = document.createElement('canvas');
-  cv.width = w; cv.height = h;
-  const ctx = cv.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(bmp, 0, 0, w, h);
-
-  // 灰度
-  let img = ctx.getImageData(0, 0, w, h);
-  let d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const g = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
-    d[i] = d[i+1] = d[i+2] = g;
-  }
-  // 简单阈值（可调 160~200）
-  const TH = 180;
-  for (let i = 0; i < d.length; i += 4) {
-    const v = d[i] > TH ? 255 : 0;
-    d[i] = d[i+1] = d[i+2] = v;
-  }
-  ctx.putImageData(img, 0, 0);
-
-  // 轻度去噪：膨胀/收缩简化 —— 简版：再画一次轻微模糊
-  ctx.filter = 'blur(0.3px)';
-  ctx.drawImage(cv, 0, 0);
-
-  return cv;
+const logBox = $('log');
+function log(msg){ logBox.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg)) + "\\n"; }
+function setStatus(text, type='ok'){
+  const map = { ok:'badge-ok', warn:'badge-warn', err:'badge-err' };
+  $('status').innerHTML = '<span class="badge '+(map[type]||map.ok)+'">'+ text +'</span>';
 }
+function progress(p){ $('bar').style.width = Math.max(0, Math.min(100, p)) + '%'; }
 
-// === 3) （可选）ROI：如果你的截图版式固定，按比例裁剪区域识别，速度更快 ===
-function crop(canvas, rect) {
-  const { width: W, height: H } = canvas;
-  const x = Math.round(rect.x * W), y = Math.round(rect.y * H);
-  const w = Math.round(rect.w * W), h = Math.round(rect.h * H);
-  const cv = document.createElement('canvas');
-  cv.width = w; cv.height = h;
-  const ctx = cv.getContext('2d');
-  ctx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
-  return cv;
-}
-
-// 例子：按“比例”定义区域（需要你根据常用截图微调到位）
+// ====== 这张截图版式的 ROI（比例坐标）======
 const ROI = {
   first:       { x: 0.13940256045519203, y: 0.21921921921921922, w: 0.17923186344238975, h: 0.06906906906906907 },
   second:      { x: 0.41963015647226176, y: 0.21921921921921922, w: 0.17923186344238975, h: 0.06906906906906907 },
@@ -112,86 +85,155 @@ const ROI = {
   consolation: { x: 0.059743954480796585, y: 0.58858858858858850, w: 0.8790896159317212, h: 0.16966966966966968 }
 };
 
-function only4d(arr){ return arr.map(s => (s||'').replace(/\D/g,'')).filter(s => s.length===4); }
-function normList(arr, need=10){ return only4d(arr).slice(0, need).join(','); }
-
-async function recognizeCanvas(cv) {
-  const worker = await workerReady;
-  const { data:{ text } } = await worker.recognize(cv);
-  return text;
+// ====== Tesseract 全局 worker：只初始化一次 ======
+let workerPromise;
+function initWorker(){
+  if (workerPromise) return workerPromise;
+  workerPromise = (async () => {
+    setStatus('初始化 OCR…','warn'); progress(5);
+    const worker = await Tesseract.createWorker({
+      logger: m => {
+        log(m);
+        if (m.status === 'recognizing text' && m.progress) progress(5 + Math.floor(m.progress*90));
+      }
+    });
+    await worker.loadLanguage('eng');          log('Language loaded: eng'); progress(10);
+    await worker.initialize('eng');            log('Worker initialized');    progress(15);
+    await worker.setParameters({
+      tessedit_char_whitelist: '0123456789',
+      tessedit_pageseg_mode: '6',
+      classify_bln_numeric_mode: '1',
+      preserve_interword_spaces: '1',
+      user_defined_dpi: '300'
+    });
+    progress(20);
+    setStatus('OCR 就绪');
+    return worker;
+  })().catch(err => {
+    setStatus('OCR 初始化失败','err'); log(err);
+    throw err;
+  });
+  return workerPromise;
 }
 
-async function runOcr(file, useRoi=true) {
+// ====== 预处理：缩放≤1400px、灰度、二值化、去噪 ======
+async function preprocess(file) {
+  const bmp = await createImageBitmap(file);
+  const maxW = 1400, scale = Math.min(1, maxW / bmp.width);
+  const W = Math.round(bmp.width * scale), H = Math.round(bmp.height * scale);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0, W, H);
+  let img = ctx.getImageData(0, 0, W, H), d = img.data;
+  for (let i=0;i<d.length;i+=4){ const g=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114; d[i]=d[i+1]=d[i+2]=g; }
+  const TH=180; for (let i=0;i<d.length;i+=4){ const v=d[i]>TH?255:0; d[i]=d[i+1]=d[i+2]=v; }
+  ctx.putImageData(img,0,0); ctx.filter='blur(0.3px)'; ctx.drawImage(cv,0,0);
+  return cv;
+}
+function cropByRatio(canvas, r){
+  const W=canvas.width,H=canvas.height;
+  const x=Math.round(r.x*W), y=Math.round(r.y*H), w=Math.round(r.w*W), h=Math.round(r.h*H);
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  cv.getContext('2d').drawImage(canvas,x,y,w,h,0,0,w,h);
+  return cv;
+}
+const pick4 = (t) => (t.match(/\b\d{4}\b/)||[''])[0];
+const list4 = (t, n=10) => (t.match(/\b\d{4}\b/g)||[]).slice(0,n).join(',');
+
+async function runOcr(file){
+  const worker = await initWorker();
+  setStatus('预处理图片…','warn'); progress(25);
   const pre = await preprocess(file);
-
-  if (useRoi) {
-    // 分区识别（更快更准）
-    const [t1, t2, t3, ts, tc] = await Promise.all([
-      recognizeCanvas(crop(pre, ROI.first)),
-      recognizeCanvas(crop(pre, ROI.second)),
-      recognizeCanvas(crop(pre, ROI.third)),
-      recognizeCanvas(crop(pre, ROI.specialBlock)),
-      recognizeCanvas(crop(pre, ROI.consolBlock)),
-    ]);
-
-    const is4 = s => /^\d{4}$/.test(s);
-    // 从每个 ROI 中抓最先出现的4位数
-    const pick1 = (txt) => (txt.match(/\b\d{4}\b/) || [''])[0];
-
-    const first  = pick1(t1);
-    const second = pick1(t2);
-    const third  = pick1(t3);
-
-    // 特/慰：提取 10 个
-    const specials = (ts.match(/\b\d{4}\b/g) || []).slice(0,10);
-    const consols  = (tc.match(/\b\d{4}\b/g) || []).slice(0,10);
-
-    return {
-      first, second, third,
-      special: normList(specials, 10),
-      consolation: normList(consols, 10),
-    };
-  } else {
-    // 整图识别（通用兜底）
-    const worker = await workerReady;
-    const { data:{ text } } = await worker.recognize(pre);
-    return extractByHeuristics(text); // 你的原有解析函数可保留
-  }
+  setStatus('分区识别中…','warn'); progress(30);
+  // ⚠ 修正：这里用 ROI.special / ROI.consolation（之前写成 specialBlock/consolBlock 会报错）
+  const [t1,t2,t3,ts,tc] = await Promise.all([
+    worker.recognize(cropByRatio(pre, ROI.first)).then(r=>r.data.text),
+    worker.recognize(cropByRatio(pre, ROI.second)).then(r=>r.data.text),
+    worker.recognize(cropByRatio(pre, ROI.third)).then(r=>r.data.text),
+    worker.recognize(cropByRatio(pre, ROI.special)).then(r=>r.data.text),
+    worker.recognize(cropByRatio(pre, ROI.consolation)).then(r=>r.data.text),
+  ]);
+  progress(98);
+  const result = {
+    first: pick4(t1)||'',
+    second: pick4(t2)||'',
+    third: pick4(t3)||'',
+    special: list4(ts,10),
+    consolation: list4(tc,10)
+  };
+  log({parsed: result});
+  progress(100);
+  setStatus('识别完成');
+  return result;
 }
 
-// === 4) 绑定按钮：复用 worker + ROI ===
-$('btnOcr').addEventListener('click', async () => {
-  const file = $('img').files?.[0];
-  if(!file){ alert('请先选择开奖截图'); return; }
-  if(!$('draw_date').value){ alert('请选择开奖日期'); return; }
+// ====== 事件：按钮、拖拽、粘贴 ======
+function fileFromEvent(e){
+  const f = (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) ||
+            (e.clipboardData && e.clipboardData.files && e.clipboardData.files[0]) || null;
+  return f && f.type.startsWith('image/') ? f : null;
+}
+const dz = $('dz');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  const f = fileFromEvent(e); if (f) { $('img').files = new DataTransfer().files; log('已拖拽图片：'+(f.name||'')); $('img')._file=f; }
+});
+window.addEventListener('paste', e => {
+  const f = fileFromEvent(e); if (f) { $('img')._file=f; log('已粘贴截图'); setStatus('已粘贴图片'); }
+});
 
-  $('status').textContent = '识别中…（已启用加速）';
-  const t0 = performance.now();
+$('btnOcr').addEventListener('click', async () => {
   try {
-    const r = await runOcr(file, true); // true=启用ROI
-    $('first').value = r.first || '';
-    $('second').value = r.second || '';
-    $('third').value = r.third || '';
-    $('special').value = r.special || '';
-    $('consolation').value = r.consolation || '';
-    $('preview').style.display = 'block';
-    const dt = (performance.now()-t0).toFixed(0);
-    $('status').textContent = `完成，用时 ${dt} ms`;
+    const file = $('img').files?.[0] || $('img')._file;
+    if(!file){ alert('请先选择或粘贴开奖截图'); return; }
+    if(!$('draw_date').value){ alert('请选择开奖日期'); return; }
+    $('preview').style.display='none'; $('btnSave').disabled = true; progress(0); log('--- START OCR ---');
+    const r = await runOcr(file);
+    $('first').value = r.first;
+    $('second').value = r.second;
+    $('third').value = r.third;
+    $('special').value = r.special;
+    $('consolation').value = r.consolation;
+    $('preview').style.display='block';
+    $('btnSave').disabled = false;
   } catch (e) {
-    $('status').textContent = '识别失败，已回退到通用模式';
-    try {
-      const r2 = await runOcr(file, false);
-      $('first').value = r2.first || '';
-      $('second').value = r2.second || '';
-      $('third').value = r2.third || '';
-      $('special').value = r2.special || '';
-      $('consolation').value = r2.consolation || '';
-      $('preview').style.display = 'block';
-    } catch (err) {
-      $('status').textContent = '识别失败，请换更清晰截图或手动填入';
-    }
+    setStatus('识别失败（详见日志）','err');
+    log(e && (e.stack || e.message || e));
+  }
+});
+
+$('btnSave').addEventListener('click', async () => {
+  const payload = {
+    date: $('draw_date').value,
+    market: $('market').value,
+    first: $('first').value.trim(),
+    second: $('second').value.trim(),
+    third: $('third').value.trim(),
+    special: $('special').value.replace(/\s+/g,''),
+    consolation: $('consolation').value.replace(/\s+/g,'')
+  };
+  const is4 = s => /^\d{4}$/.test(s);
+  const sp = payload.special.split(',').filter(Boolean);
+  const co = payload.consolation.split(',').filter(Boolean);
+
+  if(!is4(payload.first)||!is4(payload.second)||!is4(payload.third)){
+    setStatus('1st/2nd/3rd 必须是4位数字','err'); return;
+  }
+  if(sp.length!==10||co.length!==10||sp.some(x=>!is4(x))||co.some(x=>!is4(x))){
+    setStatus('特/慰必须各10个4位数（逗号分隔、无空格）','err'); return;
+  }
+
+  try{
+    setStatus('保存中…','warn');
+    const res = await fetch('/admin/save_draw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data = await res.json();
+    if(data.ok){ setStatus('已保存', 'ok'); log('保存成功：'+JSON.stringify(data.data||payload)); }
+    else{ setStatus('保存失败：'+(data.error||res.status),'err'); log(data); }
+  }catch(e){
+    setStatus('保存异常（详见日志）','err'); log(e && (e.stack||e.message||e));
   }
 });
 </script>
 {% endblock %}
-
