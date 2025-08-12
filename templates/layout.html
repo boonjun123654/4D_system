@@ -82,7 +82,7 @@
             {% if session.get('role') == 'admin' %}
                 <a href="/admin/agents">代理</a>
                 <a href="/admin/draw_input">上传开奖</a>
-                <a href="/admin/ocr_upload">上传开奖图像</a>
+                <a href="/ocr">上传开奖图像</a>
             {% endif %}
         </div>
         {% endif %}
@@ -98,3 +98,4 @@
     {% block content %}{% endblock %}
 </body>
 </html>
+
