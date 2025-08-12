@@ -39,133 +39,157 @@
 <script>
 const $ = (id) => document.getElementById(id);
 
-function only4d(arr){
-  // 只保留4位纯数字
-  return arr.map(s => (s||'').replace(/\D/g,'')).filter(s => s.length===4);
-}
-function normList(arr, need=10){
-  // 取前 need 个，拼成“逗号+无空格”
-  const a = only4d(arr).slice(0, need);
-  return a.join(',');
-}
-function extractByHeuristics(fullText){
-  // 统一大小写与分隔
-  const text = fullText.replace(/\s+/g,' ').trim();
+// === 1) 全局 worker：只创建一次 ===
+let workerReady = (async () => {
+  const worker = await Tesseract.createWorker();
+  await worker.loadLanguage('eng');
+  await worker.initialize('eng');
+  // 只认数字、行块级解析、更像票据的排列
+  await worker.setParameters({
+    tessedit_char_whitelist: '0123456789',
+    tessedit_char_blacklist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+    tessedit_pageseg_mode: '6',               // 6: Assume a single uniform block of text
+    classify_bln_numeric_mode: '1',           // 数字模式
+    preserve_interword_spaces: '1',
+    user_defined_dpi: '300'
+  });
+  return worker;
+})();
 
-  // 通用：先抓到所有4位数
-  const all4d = text.match(/\b\d{4}\b/g) || [];
+// === 2) 预处理：缩放、灰度、二值化、去噪 ===
+async function preprocess(file) {
+  const bmp = await createImageBitmap(file);
+  const maxW = 1400;
+  const scale = Math.min(1, maxW / bmp.width);
+  const w = Math.round(bmp.width * scale);
+  const h = Math.round(bmp.height * scale);
 
-  // 尝试从关键词附近提取
-  function near(label, n=1){
-    const i = text.toLowerCase().indexOf(label.toLowerCase());
-    if(i<0) return [];
-    // 在关键词附近抓最多 n 个 4位数
-    const around = text.slice(Math.max(0,i-120), i+200);
-    return (around.match(/\b\d{4}\b/g) || []).slice(0, n);
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0, w, h);
+
+  // 灰度
+  let img = ctx.getImageData(0, 0, w, h);
+  let d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+    d[i] = d[i+1] = d[i+2] = g;
   }
-
-  let first  = near('1st',1)[0]  || near('1 st',1)[0];
-  let second = near('2nd',1)[0]  || near('2 nd',1)[0];
-  let third  = near('3rd',1)[0]  || near('3 rd',1)[0];
-
-  // 如果关键字策略失败，就按全局顺序兜底
-  if(!first || !second || !third){
-    if(all4d.length >= 3){
-      first  = first  || all4d[0];
-      second = second || all4d[1];
-      third  = third  || all4d[2];
-    }
+  // 简单阈值（可调 160~200）
+  const TH = 180;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = d[i] > TH ? 255 : 0;
+    d[i] = d[i+1] = d[i+2] = v;
   }
+  ctx.putImageData(img, 0, 0);
 
-  // Special/Consolation
-  const specialBlockIdx = text.toLowerCase().indexOf('special');
-  const consolBlockIdx  = text.toLowerCase().indexOf('consolation');
+  // 轻度去噪：膨胀/收缩简化 —— 简版：再画一次轻微模糊
+  ctx.filter = 'blur(0.3px)';
+  ctx.drawImage(cv, 0, 0);
 
-  let specials = [], consols = [];
-  if(specialBlockIdx>=0){
-    const seg = text.slice(specialBlockIdx, consolBlockIdx>0?consolBlockIdx:specialBlockIdx+800);
-    specials = seg.match(/\b\d{4}\b/g) || [];
-  }
-  if(consolBlockIdx>=0){
-    const seg = text.slice(consolBlockIdx, consolBlockIdx+800);
-    consols = seg.match(/\b\d{4}\b/g) || [];
-  }
-
-  // 兜底：如果 special/consolation 不够，从剩余号码中补齐（但不与 1/2/3 重复）
-  const used = new Set([first, second, third].filter(Boolean));
-  const rest = all4d.filter(x => !used.has(x));
-
-  if(specials.length < 10){
-    const add = rest.filter(x => specials.indexOf(x)<0).slice(0, 10 - specials.length);
-    specials = specials.concat(add);
-  }
-  if(consols.length < 10){
-    const used2 = new Set([...used, ...specials]);
-    const add = rest.filter(x => !used2.has(x)).slice(0, 10 - consols.length);
-    consols = consols.concat(add);
-  }
-
-  return {
-    first: first || '',
-    second: second || '',
-    third: third || '',
-    special: normList(specials, 10),
-    consolation: normList(consols, 10),
-  };
+  return cv;
 }
 
+// === 3) （可选）ROI：如果你的截图版式固定，按比例裁剪区域识别，速度更快 ===
+function crop(canvas, rect) {
+  const { width: W, height: H } = canvas;
+  const x = Math.round(rect.x * W), y = Math.round(rect.y * H);
+  const w = Math.round(rect.w * W), h = Math.round(rect.h * H);
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+  return cv;
+}
+
+// 例子：按“比例”定义区域（需要你根据常用截图微调到位）
+const ROI = {
+  first:        { x: 0.10, y: 0.18, w: 0.25, h: 0.06 },
+  second:       { x: 0.10, y: 0.25, w: 0.25, h: 0.06 },
+  third:        { x: 0.10, y: 0.32, w: 0.25, h: 0.06 },
+  specialBlock: { x: 0.10, y: 0.42, w: 0.80, h: 0.18 },
+  consolBlock:  { x: 0.10, y: 0.62, w: 0.80, h: 0.18 },
+};
+
+function only4d(arr){ return arr.map(s => (s||'').replace(/\D/g,'')).filter(s => s.length===4); }
+function normList(arr, need=10){ return only4d(arr).slice(0, need).join(','); }
+
+async function recognizeCanvas(cv) {
+  const worker = await workerReady;
+  const { data:{ text } } = await worker.recognize(cv);
+  return text;
+}
+
+async function runOcr(file, useRoi=true) {
+  const pre = await preprocess(file);
+
+  if (useRoi) {
+    // 分区识别（更快更准）
+    const [t1, t2, t3, ts, tc] = await Promise.all([
+      recognizeCanvas(crop(pre, ROI.first)),
+      recognizeCanvas(crop(pre, ROI.second)),
+      recognizeCanvas(crop(pre, ROI.third)),
+      recognizeCanvas(crop(pre, ROI.specialBlock)),
+      recognizeCanvas(crop(pre, ROI.consolBlock)),
+    ]);
+
+    const is4 = s => /^\d{4}$/.test(s);
+    // 从每个 ROI 中抓最先出现的4位数
+    const pick1 = (txt) => (txt.match(/\b\d{4}\b/) || [''])[0];
+
+    const first  = pick1(t1);
+    const second = pick1(t2);
+    const third  = pick1(t3);
+
+    // 特/慰：提取 10 个
+    const specials = (ts.match(/\b\d{4}\b/g) || []).slice(0,10);
+    const consols  = (tc.match(/\b\d{4}\b/g) || []).slice(0,10);
+
+    return {
+      first, second, third,
+      special: normList(specials, 10),
+      consolation: normList(consols, 10),
+    };
+  } else {
+    // 整图识别（通用兜底）
+    const worker = await workerReady;
+    const { data:{ text } } = await worker.recognize(pre);
+    return extractByHeuristics(text); // 你的原有解析函数可保留
+  }
+}
+
+// === 4) 绑定按钮：复用 worker + ROI ===
 $('btnOcr').addEventListener('click', async () => {
   const file = $('img').files?.[0];
   if(!file){ alert('请先选择开奖截图'); return; }
   if(!$('draw_date').value){ alert('请选择开奖日期'); return; }
 
-  $('status').textContent = '识别中…(取决于图片清晰度)';
-  const worker = await Tesseract.createWorker('eng', 1, { logger: m => {} });
-  const { data: { text } } = await worker.recognize(file);
-  await worker.terminate();
-
-  const result = extractByHeuristics(text);
-  $('first').value = result.first;
-  $('second').value = result.second;
-  $('third').value = result.third;
-  $('special').value = result.special;           // 逗号+无空格
-  $('consolation').value = result.consolation;   // 逗号+无空格
-
-  $('preview').style.display = 'block';
-  $('status').textContent = '识别完成，请核对后保存';
-});
-
-$('btnSave').addEventListener('click', async () => {
-  const payload = {
-    date: $('draw_date').value,
-    market: $('market').value,
-    first: $('first').value.trim(),
-    second: $('second').value.trim(),
-    third: $('third').value.trim(),
-    special: $('special').value.replace(/\s+/g,''),         // 保证无空格
-    consolation: $('consolation').value.replace(/\s+/g,'')  // 保证无空格
-  };
-  // 基本校验
-  const is4 = s => /^\d{4}$/.test(s);
-  if(!is4(payload.first) || !is4(payload.second) || !is4(payload.third)){
-    alert('1st/2nd/3rd 必须为4位数字'); return;
-  }
-  const sp = payload.special.split(',').filter(Boolean);
-  const co = payload.consolation.split(',').filter(Boolean);
-  if(sp.length!==10 || co.length!==10 || sp.some(x=>!is4(x)) || co.some(x=>!is4(x))){
-    alert('Special/Consolation 必须各10个4位数，逗号分隔且无空格'); return;
-  }
-
-  const res = await fetch('/admin/save_draw', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  if(data.ok){
-    alert('✅ 保存成功');
-  }else{
-    alert('❌ 保存失败：' + (data.error || 'unknown'));
+  $('status').textContent = '识别中…（已启用加速）';
+  const t0 = performance.now();
+  try {
+    const r = await runOcr(file, true); // true=启用ROI
+    $('first').value = r.first || '';
+    $('second').value = r.second || '';
+    $('third').value = r.third || '';
+    $('special').value = r.special || '';
+    $('consolation').value = r.consolation || '';
+    $('preview').style.display = 'block';
+    const dt = (performance.now()-t0).toFixed(0);
+    $('status').textContent = `完成，用时 ${dt} ms`;
+  } catch (e) {
+    $('status').textContent = '识别失败，已回退到通用模式';
+    try {
+      const r2 = await runOcr(file, false);
+      $('first').value = r2.first || '';
+      $('second').value = r2.second || '';
+      $('third').value = r2.third || '';
+      $('special').value = r2.special || '';
+      $('consolation').value = r2.consolation || '';
+      $('preview').style.display = 'block';
+    } catch (err) {
+      $('status').textContent = '识别失败，请换更清晰截图或手动填入';
+    }
   }
 });
 </script>
