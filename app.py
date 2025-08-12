@@ -35,24 +35,24 @@ login_attempts = {}
 csp = {
     'default-src': "'self'",
     'script-src': [
-        "'self'", "'unsafe-inline'", "'wasm-unsafe-eval'",
-        "https://unpkg.com", "https://cdn.jsdelivr.net"
+        "'self'",
+        "'unsafe-inline'",
+        "'wasm-unsafe-eval'",
+        "'unsafe-eval'",                 # ⬅️ 有些打包路径会用到 Function 构造
+        "https://unpkg.com",
+        "https://cdn.jsdelivr.net"
     ],
-    'worker-src': [
-        "'self'", "blob:"
-    ],
+    # 某些浏览器仍然参考 child-src 控制 worker，保险起见一起放开
+    'child-src': ["'self'", "blob:"],    # ⬅️ 新增
+    'worker-src': ["'self'", "blob:"],
     'connect-src': [
         "'self'", "blob:", "data:",
         "https://unpkg.com",
         "https://cdn.jsdelivr.net",
-        "https://tessdata.projectnaptha.com"   # ⬅️ 必须：语言包域名
+        "https://tessdata.projectnaptha.com"  # ⬅️ 语言包域名
     ],
-    'img-src': [
-        "'self'", "data:", "blob:"
-    ],
-    'style-src': [
-        "'self'", "'unsafe-inline'"
-    ],
+    'img-src': ["'self'", "data:", "blob:"],
+    'style-src': ["'self'", "'unsafe-inline'"],
     'frame-ancestors': "'none'",
 }
 
