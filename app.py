@@ -13,6 +13,7 @@ from functools import wraps
 from decimal import Decimal
 import pytesseract
 from pytz import timezone as pytz_tz
+from pytz import UTC as UTC_TZ
 from PIL import Image
 from werkzeug.utils import secure_filename
 from captcha.image import ImageCaptcha
@@ -290,14 +291,16 @@ def process_winning():
     # 删除旧记录，避免重复
     WinningRecord4D.query.filter_by(draw_date=selected_dt).delete()
 
+    start_utc, end_utc, selected_dt = local_day_bounds_utc(date_str)
     all_results = (
         DrawResult4D.query
-        .filter(func.date(DrawResult4D.date) == selected_dt)  # 关键
+        .filter(DrawResult4D.date >= start_utc,
+                DrawResult4D.date <  end_utc)
         .all()
     )
     result_map = defaultdict(dict)
     for r in all_results:
-        key = r.date.strftime("%Y-%m-%d")
+        key = r.date.astimezone(MY_TZ).strftime("%Y-%m-%d")
         result_map[key][r.market] = {
             "1st": r.first,
             "2nd": r.second,
@@ -987,10 +990,12 @@ def save_draw():
 
     # 4) 幂等写入（推荐在 DB 层有唯一约束: UNIQUE (date, market)）
     try:
+        start_utc, end_utc, _ = local_day_bounds_utc(date_str)
         rec = DrawResult4D.query.filter(
-            func.date(DrawResult4D.date) == d,
-            DrawResult4D.market == market
-        ).with_for_update(read=True).first()  # 防并发：需要在事务中
+            DrawResult4D.market == market,
+            DrawResult4D.date >= start_utc,
+            DrawResult4D.date <  end_utc
+        ).with_for_update(read=True).first()
 
         if rec:
             rec.first = first
@@ -1052,9 +1057,11 @@ def admin_draw_input():
                     continue
 
                 # 若已有同日同 market，改为更新（避免重复）
+                start_utc, end_utc, _ = local_day_bounds_utc(date)
                 rec = DrawResult4D.query.filter(
-                    func.date(DrawResult4D.date) == d,
-                    DrawResult4D.market == market
+                    DrawResult4D.market == market,
+                    DrawResult4D.date >= start_utc,
+                    DrawResult4D.date <  end_utc
                 ).first()
 
                 if rec:
@@ -1178,6 +1185,16 @@ def generate_order_code_and_create_order(agent_id: str) -> str:
     ))
     # 不在这里 commit，由调用方统一提交（保证整单原子性）
     return order_code
+
+def local_day_bounds_utc(date_str: str):
+    """
+    输入 'YYYY-MM-DD' 的马来西亚日期字符串，
+    返回该“本地日”的 UTC 起止边界，用于数据库范围查询。
+    """
+    d = datetime.strptime(date_str, "%Y-%m-%d").date()
+    start_local = MY_TZ.localize(datetime(d.year, d.month, d.day, 0, 0, 0))
+    end_local   = start_local + timedelta(days=1)
+    return start_local.astimezone(UTC_TZ), end_local.astimezone(UTC_TZ), d
 
 if __name__ == '__main__':
     app.run(debug=True)
