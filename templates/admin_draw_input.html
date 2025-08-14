@@ -40,31 +40,42 @@
 </form>
 
 <script>
+function dowMY(yyyyMMdd) {
+  // 返回 0=周日 ... 6=周六
+  const [y0,m0,d] = yyyyMMdd.split('-').map(Number);
+  const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+  let y = y0, m = m0;
+  if (m < 3) y -= 1;
+  return (y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + t[m-1] + d) % 7;
+}
+
 function applyGlobalDate() {
-    const selectedDate = document.getElementById('global_date').value;
-    if (!selectedDate) return;
+  const selectedDate = document.getElementById('global_date').value;
+  if (!selectedDate) return;
 
-    // 把日期填入所有市场的 input
-    document.querySelectorAll('.market-date').forEach(el => {
-        el.value = selectedDate;
+  // 把日期填入所有市场的 input
+  document.querySelectorAll('.market-date').forEach(el => {
+    el.value = selectedDate;
+  });
+
+  // ✅ 用纯日期算法求星期（按马来西亚自然日）
+  const weekday = dowMY(selectedDate);  // 0=Sun ... 6=Sat
+  const tip = document.getElementById('weekday_tip');
+
+  // 0=日, 3=三, 6=六 为允许所有市场
+  const isAllowedDay = (weekday === 0 || weekday === 3 || weekday === 6);
+  tip.textContent = isAllowedDay ? "✅ 可输入所有市场" : "⚠️ 非开奖日，仅可输入 H/E 市场";
+
+  document.querySelectorAll("tr[data-market]").forEach(row => {
+    const m = row.getAttribute("data-market");
+    const isHE = (m === 'H' || m === 'E');
+    const allowInput = isAllowedDay || isHE;
+
+    // 非开奖日：仅 H/E 可填；其他市场整行全部禁用
+    row.querySelectorAll('input').forEach(input => {
+      input.disabled = !allowInput;
     });
-
-    const weekday = new Date(selectedDate).getDay();  // 0=Sunday, ..., 6=Saturday
-    const tip = document.getElementById('weekday_tip');
-
-    // 0=日, 3=三, 6=六 是合法日
-    const isAllowedDay = [0, 3, 6].includes(weekday);
-    tip.textContent = isAllowedDay ? "✅ 可输入所有市场" : "⚠️ 非开奖日，仅可输入 H/E 市场";
-
-    document.querySelectorAll("tr[data-market]").forEach(row => {
-        const m = row.getAttribute("data-market");
-        const isHE = ['H', 'E'].includes(m);
-        const allowInput = isAllowedDay || isHE;
-
-        row.querySelectorAll('input').forEach(input => {
-            input.disabled = !allowInput && !isHE && input.name.startsWith('first_');
-        });
-    });
+  });
 }
 </script>
 {% endblock %}
