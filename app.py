@@ -12,8 +12,7 @@ from werkzeug.security import generate_password_hash,check_password_hash
 from functools import wraps
 from decimal import Decimal
 import pytesseract
-from pytz import timezone as pytz_tz
-from pytz import UTC as UTC_TZ
+from pytz import timezone
 from PIL import Image
 from werkzeug.utils import secure_filename
 from captcha.image import ImageCaptcha
@@ -35,16 +34,12 @@ login_attempts = {}
 
 csp = {
     'default-src': "'self'",
-    'script-src': [
-        "'self'",
-        "'unsafe-inline'",      # 你模板里有内联 <script>
-        "'wasm-unsafe-eval'",   # WebAssembly 需要
-    ],
-    'worker-src': ["'self'", "blob:"],  # Tesseract 用 WebWorker
-    'connect-src': ["'self'", "blob:", "data:"],  # 语言包/wasm 都走本域
-    'img-src': ["'self'", "data:", "blob:"],
+    'script-src': ["'self'", "'unsafe-inline'"],
     'style-src': ["'self'", "'unsafe-inline'"],
-    'frame-ancestors': "'none'",
+    'img-src': ["'self'", "data:"],
+    'font-src': "'self'",
+    'connect-src': "'self'",
+    'frame-ancestors': "'none'"
 }
 
 Talisman(app,
@@ -56,8 +51,6 @@ Talisman(app,
     frame_options='DENY'
 )
 
-MY_TZ = pytz_tz('Asia/Kuala_Lumpur')
-
 MAX_ATTEMPTS = 5
 LOCKOUT_MINUTES = 10
 
@@ -66,7 +59,7 @@ with app.app_context():
     db.create_all()
 
 def lock_today_bets():
-    now = datetime.now(MY_TZ)
+    now = datetime.now(timezone('Asia/Kuala_Lumpur'))
     today_str = now.strftime("%d/%m")
     print(f"[DEBUG] 今天日期: {today_str}")
     bets = FourDBet.query.filter(FourDBet.dates.any(today_str), FourDBet.status == 'active').all()
@@ -90,8 +83,7 @@ def login_required(view_func):
 
 @app.before_request
 def enforce_https_in_render():
-    if app.debug or os.environ.get("FLASK_ENV") == "development":
-        return  # 本地不跳
+    """Render 自动注入 X-Forwarded-Proto 头，值为 'http' 或 'https'"""
     if request.headers.get('X-Forwarded-Proto', 'http') != 'https':
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
@@ -123,7 +115,7 @@ def generate_captcha():
 @app.route('/bet', methods=['GET', 'POST'])
 @login_required
 def bet():
-    malaysia = pytz_tz('Asia/Kuala_Lumpur')
+    malaysia = timezone('Asia/Kuala_Lumpur')
     now = datetime.now(malaysia)
     date_today = now.date()
     results = []
@@ -134,7 +126,7 @@ def bet():
         agents = []
 
     if request.method == 'POST':
-        now = datetime.now(pytz_tz('Asia/Kuala_Lumpur'))
+        now = datetime.now(timezone('Asia/Kuala_Lumpur'))
         today_str = now.strftime('%d/%m')
         selected_dates = set()
 
@@ -291,17 +283,10 @@ def process_winning():
     # 删除旧记录，避免重复
     WinningRecord4D.query.filter_by(draw_date=selected_dt).delete()
 
-    start_utc, end_utc, selected_dt = local_day_bounds_utc(date_str)
-    all_results = (
-        DrawResult4D.query
-        .filter(DrawResult4D.date >= start_utc,
-                DrawResult4D.date <  end_utc)
-        .all()
-    )
+    all_results = DrawResult4D.query.filter_by(date=date_str).all()
     result_map = defaultdict(dict)
     for r in all_results:
-        key = r.date.astimezone(MY_TZ).strftime("%Y-%m-%d")
-        result_map[key][r.market] = {
+        result_map[r.date.strftime("%Y-%m-%d")][r.market] = {
             "1st": r.first,
             "2nd": r.second,
             "3rd": r.third,
@@ -630,7 +615,7 @@ def report():
 @app.route('/history')
 @login_required
 def history():
-    tz = pytz_tz('Asia/Kuala_Lumpur')
+    tz = timezone('Asia/Kuala_Lumpur')
     now = datetime.now(tz)
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
@@ -809,7 +794,7 @@ def update_agent_password(agent_id):
     new_pw = request.form.get('new_password')
     agent = Agent4D.query.get(agent_id)
     if agent and new_pw:
-        agent.password = generate_password_hash(new_pw)
+        agent.password = new_pw
         db.session.commit()
         return redirect(f"/admin/agents?pw_updated={agent.username}")
     else:
@@ -919,120 +904,24 @@ def logout():
     session.clear()
     return redirect('/login')
 
-@app.route('/ocr')
-@login_required
-def ocr_page():
+@app.route('/admin/ocr', methods=['GET', 'POST'])
+def ocr_upload():
     if session.get('role') != 'admin':
         return redirect('/')
-    return render_template('ocr.html')
 
-@app.route('/admin/save_draw', methods=['POST'])
-@login_required
-def save_draw():
-    if session.get('role') != 'admin':
-        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    results = ""
+    if request.method == 'POST':
+        image = request.files.get('image')
+        if image:
+            filename = secure_filename(image.filename)
+            filepath = os.path.join('uploads', filename)
+            image.save(filepath)
 
-    try:
-        data = request.get_json(force=True) or {}
-    except Exception:
-        return jsonify({"ok": False, "error": "invalid json"}), 400
+            # OCR 识别
+            text = pytesseract.image_to_string(Image.open(filepath), lang='eng')
+            results = text.strip()
 
-    date_str = (data.get('date') or '').strip()            # 'YYYY-MM-DD'
-    market   = (data.get('market') or 'M').strip().upper()
-    first    = (data.get('first') or '').strip()
-    second   = (data.get('second') or '').strip()
-    third    = (data.get('third') or '').strip()
-    special  = (data.get('special') or '')
-    consol   = (data.get('consolation') or '')
-
-    # 1) 基础与白名单校验
-    MARKET_SET = set(list("MPTSHEBKW"))
-    if market not in MARKET_SET:
-        return jsonify({"ok": False, "error": "invalid market"}), 400
-
-    is4 = lambda s: s.isdigit() and len(s) == 4
-    if not (date_str and is4(first) and is4(second) and is4(third)):
-        return jsonify({"ok": False, "error": "invalid 1st/2nd/3rd"}), 400
-
-    # 2) 规范化 & 强校验（全角->半角，去空格，去重，必须10个不重复4位数）
-    def canon_list(s: str):
-        # 全角逗号/空白 -> 半角逗号；移除空格；拆分
-        s = s.replace('，', ',').replace('、', ',').replace('；', ',').replace(';', ',')
-        s = s.replace(' ', '')
-        items = [x for x in s.split(',') if x]
-        # 只保留4位数字，去重并按原序保留前10个
-        seen, out = set(), []
-        for x in items:
-            x = ''.join(ch for ch in x if ch.isdigit())
-            if is4(x) and x not in seen:
-                seen.add(x); out.append(x)
-            if len(out) == 10:
-                break
-        return out
-
-    sp = canon_list(special)
-    co = canon_list(consol)
-    if len(sp) != 10 or len(co) != 10:
-        return jsonify({"ok": False, "error": "special/consolation need 10 unique 4-digit each"}), 400
-
-    # 不允许将 1/2/3 放进特/慰（避免重复）
-    top3 = {first, second, third}
-    if any(x in top3 for x in sp) or any(x in top3 for x in co):
-        return jsonify({"ok": False, "error": "top prizes must not appear in special/consolation"}), 400
-
-    # 3) 组装 datetime（MY_TZ 本地化）
-    try:
-        d = datetime.strptime(date_str, "%Y-%m-%d").date()
-        dt_naive = datetime(d.year, d.month, d.day)
-        dt_val = MY_TZ.localize(dt_naive)
-    except Exception:
-        return jsonify({"ok": False, "error": "invalid date"}), 400
-
-    # 4) 幂等写入（推荐在 DB 层有唯一约束: UNIQUE (date, market)）
-    try:
-        start_utc, end_utc, _ = local_day_bounds_utc(date_str)
-        rec = DrawResult4D.query.filter(
-            DrawResult4D.market == market,
-            DrawResult4D.date >= start_utc,
-            DrawResult4D.date <  end_utc
-        ).with_for_update(read=True).first()
-
-        if rec:
-            rec.first = first
-            rec.second = second
-            rec.third = third
-            rec.special = ",".join(sp)
-            rec.consolation = ",".join(co)
-        else:
-            rec = DrawResult4D(
-                date=dt_val,
-                market=market,
-                first=first,
-                second=second,
-                third=third,
-                special=",".join(sp),
-                consolation=",".join(co)
-            )
-            db.session.add(rec)
-
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"ok": False, "error": f"db error: {type(e).__name__}"}), 500
-
-    # 5) 返回落库结果
-    return jsonify({
-        "ok": True,
-        "data": {
-            "date": date_str,
-            "market": market,
-            "first": first,
-            "second": second,
-            "third": third,
-            "special": ",".join(sp),
-            "consolation": ",".join(co),
-        }
-    })
+    return render_template('admin_ocr_upload.html', results=results)
 
 @app.route('/admin/draw_input', methods=['GET', 'POST'])
 def admin_draw_input():
@@ -1049,39 +938,16 @@ def admin_draw_input():
             consolation = request.form.get(f'consolation_{market}')
 
             if date and (first or second or third or special or consolation):
-                try:
-                    d = datetime.strptime(date, "%Y-%m-%d").date()
-                    dt_naive = datetime(d.year, d.month, d.day)
-                    dt_val = MY_TZ.localize(dt_naive)
-                except Exception:
-                    continue
-
-                # 若已有同日同 market，改为更新（避免重复）
-                start_utc, end_utc, _ = local_day_bounds_utc(date)
-                rec = DrawResult4D.query.filter(
-                    DrawResult4D.market == market,
-                    DrawResult4D.date >= start_utc,
-                    DrawResult4D.date <  end_utc
-                ).first()
-
-                if rec:
-                    rec.first = first or rec.first
-                    rec.second = second or rec.second
-                    rec.third = third or rec.third
-                    rec.special = special or rec.special
-                    rec.consolation = consolation or rec.consolation
-                else:
-                    rec = DrawResult4D(
-                        date=dt_val,
-                        market=market,
-                        first=first or None,
-                        second=second or None,
-                        third=third or None,
-                        special=special or None,
-                        consolation=consolation or None
-                    )
-                    db.session.add(rec)
-
+                result = DrawResult4D(
+                    date=date,
+                    market=market,
+                    first=first or None,
+                    second=second or None,
+                    third=third or None,
+                    special=special or None,
+                    consolation=consolation or None
+                )
+                db.session.add(result)
         db.session.commit()
         flash("✅ 成功上传开奖成绩")
         return redirect('/admin/draw_input')
@@ -1161,7 +1027,7 @@ def delete_order(order_code):
 
 def generate_order_code_and_create_order(agent_id: str) -> str:
     """原子获取当日唯一流水号，返回订单号，并写入 orders_4d。"""
-    tz = pytz_tz('Asia/Kuala_Lumpur')
+    tz = timezone('Asia/Kuala_Lumpur')
     today = datetime.now(tz).date()  # 注意用马来西亚日期做日序号
     # 原子自增 last_seq 并返回
     seq_sql = text("""
@@ -1185,16 +1051,6 @@ def generate_order_code_and_create_order(agent_id: str) -> str:
     ))
     # 不在这里 commit，由调用方统一提交（保证整单原子性）
     return order_code
-
-def local_day_bounds_utc(date_str: str):
-    """
-    输入 'YYYY-MM-DD' 的马来西亚日期字符串，
-    返回该“本地日”的 UTC 起止边界，用于数据库范围查询。
-    """
-    d = datetime.strptime(date_str, "%Y-%m-%d").date()
-    start_local = MY_TZ.localize(datetime(d.year, d.month, d.day, 0, 0, 0))
-    end_local   = start_local + timedelta(days=1)
-    return start_local.astimezone(UTC_TZ), end_local.astimezone(UTC_TZ), d
 
 if __name__ == '__main__':
     app.run(debug=True)
