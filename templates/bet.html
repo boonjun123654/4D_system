@@ -22,7 +22,7 @@
                 <th rowspan="2">#</th>
                 <th rowspan="2">下注号码</th>
 
-                <!-- ✅ 在 B/S/A/C 表头下加入总控小格 -->
+                <!-- ✅ B/S/A/C 表头下加入总控小格 -->
                 <th rowspan="2" style="text-align:center;width:70px">
                   B<br>
                   <input type="checkbox" id="fillB"
@@ -158,26 +158,19 @@ const odds = {
 function copyAmountDown(col, checked) {
   const first = document.querySelector(`input[name="${col}1"]`);
   const firstVal = first ? first.value : '';
-
   for (let i = 2; i <= 12; i++) {
     const el = document.querySelector(`input[name="${col}${i}"]`);
     if (!el) continue;
     el.value = checked ? firstVal : '';
-
-    // 触发事件，确保联动与合计会刷新
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
-
-  if (typeof updateTotals === 'function') {
-    try { updateTotals(); } catch(_) {}
-  }
+  if (typeof updateTotals === 'function') { try { updateTotals(); } catch(_) {} }
 }
 
 function getHighestWin(markets, B, S, A, C, dateCount, type, number) {
     let max = 0;
     const comboFactor = (type === 'IBox') ? getCombinationCount(number) : 1;
-
     for (const m of ['H','E','M','P','T','S','B','K','W']) {
         if (!markets.includes(m)) continue;
         const o = odds[m];
@@ -220,64 +213,53 @@ function updateTotals() {
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
 
-        // 💰中奖金额计算（行内最高可能）
         const win = getHighestWin(markets, B, S, A, C, dateCount, type, number);
         document.querySelector(`input[name="win_amount${i}"]`).value = win.toFixed(2);
         document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
     }
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
+
+/* ✅ 重新实现：按“日期 ➜ 市场”分组，构建弹窗文本 */
 function handleBet() {
-    // —— 时限检查（保持原逻辑） ——
+    // —— 截止时间检查 ——
     const malaysiaNow = new Date(
         new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
     );
     const cutoff = new Date(malaysiaNow);
     cutoff.setHours(19, 0, 0, 0);
 
-    // 收集“全局已选”的日期索引与市场键，用于截止判断
+    // 统计全局选中的日期（用于截止判断）
     const selectedDateIndexes = new Set();
-    const selectedMarketKeys  = new Set();
-
     for (let i = 1; i <= 12; i++) {
-        const number = document.querySelector(`input[name="number${i}"]`)?.value.trim();
-        if (!number) continue;
-
+        const hasNumber = (document.querySelector(`input[name="number${i}"]`)?.value.trim() || '') !== '';
+        if (!hasNumber) continue;
         for (let d = 0; d < 7; d++) {
             const checkbox = document.querySelector(`input[name="date${i}_${d}"]`);
             if (checkbox?.checked) selectedDateIndexes.add(d);
         }
-        for (const m of ['M','P','T','S','B','K','W','H','E']) {
-            const checkbox = document.querySelector(`input[name="market${i}_${m}"]`);
-            if (checkbox?.checked) selectedMarketKeys.add(m);
-        }
     }
-
-    // 生成“dd/mm”标签（两位数）用于比较今天是否被选择
     const dateLabels = Array.from(selectedDateIndexes).map(d => {
         const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement
-            .textContent.trim().split('\n').pop().trim();   // 例如 "27/8"
+            .textContent.trim().split('\n').pop().trim(); // 27/8
         const [day, month] = rawLabel.split('/').map(n => n.padStart(2, '0'));
-        return `${day}/${month}`;                            // "27/08"
+        return `${day}/${month}`; // 27/08
     });
-
-    const today = malaysiaNow;
-    const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const todayStr = `${String(malaysiaNow.getDate()).padStart(2, '0')}/${String(malaysiaNow.getMonth() + 1).padStart(2, '0')}`;
     if (dateLabels.includes(todayStr) && malaysiaNow >= cutoff) {
         alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
         return false;
     }
 
-    // —— 统计总额 + 构建「日期 ➜ 市场 ➜ 号码行」分组 ——
+    // —— 汇总总额、并把每行分发到【日期×市场】分组 ——
     let total = 0;
-    const grouped = {};     // { '27/08': { 'M': ['1234=1B 1S', ...], 'P': [...] } }
-    const dateOrder = [];   // 按表头顺序记录出现过的日期（已是 dd/mm 两位数）
-
+    const grouped = {};                 // { '27/08': { 'M': ['1234=1B 1S', ...], 'P': [...] } }
+    const dateOrder = [];               // 出现过的日期顺序
     const addDateOnce = (d) => { if (!dateOrder.includes(d)) dateOrder.push(d); };
     const MARKET_ORDER_PRINT = ['M','P','T','S','B','K','W','H','E'];
 
     for (let i = 1; i <= 12; i++) {
-        const num  = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!num) continue;
 
         const type = document.querySelector(`select[name="type${i}"]`)?.value;
@@ -286,26 +268,25 @@ function handleBet() {
         const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
         const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
 
-        // 行显示：按你要求把 "=" 两侧的空格去掉
+        // 行展示格式（等号无空格）
         let line = `${num}=`;
         if (B) line += `${B}B `;
         if (S) line += `${S}S `;
         if (A) line += `${A}A `;
         if (C) line += `${C}C `;
-        line = line.trimRight();
+        line = line.trimEnd();
 
-        // 累加总额（用你页面上的行合计）
+        // 行总额
         const row = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
         total += row;
 
-        // 该行选中的日期（dd/mm，两位）与市场
+        // 行选中的日期（dd/mm，两位）与市场
         const rowDates = [];
         for (let d = 0; d < 7; d++) {
             const cb = document.querySelector(`input[name="date${i}_${d}"]`);
             if (cb?.checked) {
-                const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement
-                    .textContent.trim().split('\n').pop().trim();
-                const [day, month] = rawLabel.split('/').map(n => n.padStart(2,'0'));
+                const raw = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
+                const [day, month] = raw.split('/').map(n => n.padStart(2,'0'));
                 rowDates.push(`${day}/${month}`);
             }
         }
@@ -315,7 +296,7 @@ function handleBet() {
             if (cb?.checked) rowMarkets.push(m);
         }
 
-        // 把该行分发到「每个日期 × 每个市场」的小组里
+        // 分发
         for (const d of rowDates) {
             addDateOnce(d);
             if (!grouped[d]) grouped[d] = {};
@@ -326,32 +307,31 @@ function handleBet() {
         }
     }
 
-    // —— 中奖上限检测（保持原逻辑） ——
+    // —— 奖金上限检测（按 号码×市场×日期） ——
     const MAX_WIN = 10000;
-    const betMap = {};  // 结构：{ '6556_M_17/07': total_win }
+    const betMap = {};  // { '6556_M_27/08': total_win }
     for (let i = 1; i <= 12; i++) {
         const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!num) continue;
-
         const win = parseFloat(document.querySelector(`input[name="win_amount${i}"]`)?.value) || 0;
 
-        const selectedDatesRow = [];
+        const dds = [];
         for (let d = 0; d < 7; d++) {
             const cb = document.querySelector(`input[name="date${i}_${d}"]`);
             if (cb?.checked) {
-                const label = document.getElementById(`select_date_${d}`)?.parentElement
-                    .textContent.trim().split('\n').pop().trim(); // 可能是 27/8
-                selectedDatesRow.push(label);
+                const raw = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim(); // 27/8
+                const [day, month] = raw.split('/').map(n => n.padStart(2,'0'));
+                dds.push(`${day}/${month}`); // 27/08
             }
         }
-        const selectedMarketsRow = [];
+        const mms = [];
         for (const m of ['M','P','T','S','B','K','W','H','E']) {
             const cb = document.querySelector(`input[name="market${i}_${m}"]`);
-            if (cb?.checked) selectedMarketsRow.push(m);
+            if (cb?.checked) mms.push(m);
         }
 
-        for (const d of selectedDatesRow) {
-            for (const m of selectedMarketsRow) {
+        for (const d of dds) {
+            for (const m of mms) {
                 const key = `${num}_${m}_${d}`;
                 betMap[key] = (betMap[key] || 0) + win;
                 if (betMap[key] > MAX_WIN) {
@@ -362,13 +342,13 @@ function handleBet() {
         }
     }
 
+    // —— 二次确认 ——
     const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
     if (!confirm(confirmMsg)) return false;
 
-    // —— 组装弹窗文本：日期标题 ➜ 按市场顺序列出号码 ——
+    // —— 组装弹窗文本（按日期→市场） ——
     const formattedTotal = Number.isInteger(total) ? total : total.toFixed(2);
     const sections = [];
-
     for (const d of dateOrder) {
         if (!grouped[d]) continue;
         sections.push(d);
@@ -379,20 +359,20 @@ function handleBet() {
                 sections.push(list.join('\n'));
             }
         }
-        // 各日期之间空一行
-        sections.push('');
+        sections.push(''); // 日期块之间空行
     }
     sections.push(`GT = ${formattedTotal}`);
-    const finalText = sections.join('\n').replace(/\n{3,}/g, '\n\n'); // 清理多余空行
+    const finalText = sections.join('\n').replace(/\n{3,}/g, '\n\n');
 
-    // 弹窗显示（不阻止提交）
+    // 弹窗（不阻止提交）
     setTimeout(() => {
         localStorage.setItem("bet_popup", finalText);
         showBetPopup(finalText);
     }, 100);
 
-    return true; // 允许提交
+    return true;
 }
+
 function confirmResult() {
     const modal = document.getElementById("resultModal");
     if (modal) modal.remove();
@@ -401,7 +381,6 @@ function confirmResult() {
 function copyResult() {
     const text = document.getElementById("resultText")?.innerText || "";
     if (!text) return;
-
     navigator.clipboard.writeText(text).then(() => {
         alert("✅ 已复制下注信息");
     }).catch(err => {
@@ -486,7 +465,7 @@ function showBetPopup(text) {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
 }
 
-// ✅ 限制不合法日期和市场选择逻辑
+// ✅ 限制不合法日期和市场选择逻辑（与你旧版一致）
 function applyDateMarketRules() {
     const malaysiaNow = new Date(
         new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
@@ -503,7 +482,6 @@ function applyDateMarketRules() {
 
     const restrictedMarkets = ['M','P','T','S','B','K','W'];
 
-    // 是否选中了非法日期（非 0/3/6）
     let selectedInvalidDate = false;
     for (let d = 0; d < 7; d++) {
         const wd = weekdays[d];
@@ -514,7 +492,6 @@ function applyDateMarketRules() {
         }
     }
 
-    // 是否选中了限制市场（MPTSBKW）
     let selectedRestrictedMarket = false;
     for (const m of restrictedMarkets) {
         const checkbox = document.getElementById(`select_market_${m}`);
@@ -524,7 +501,6 @@ function applyDateMarketRules() {
         }
     }
 
-    // 🔁 遍历所有日期 checkbox（含每一行）
     for (let d = 0; d < 7; d++) {
         const wd = weekdays[d];
         const isValidDate = [0, 3, 6].includes(wd);
@@ -536,7 +512,6 @@ function applyDateMarketRules() {
             if (shouldDisable) globalCheckbox.checked = false;
         }
 
-        // 所有下注行格子
         for (let i = 1; i <= 12; i++) {
             const cb = document.querySelector(`input[name="date${i}_${d}"]`);
             if (cb) {
@@ -546,7 +521,6 @@ function applyDateMarketRules() {
         }
     }
 
-    // 🔁 遍历所有市场 checkbox（含每一行）
     for (const m of restrictedMarkets) {
         const marketCheckbox = document.getElementById(`select_market_${m}`);
         if (marketCheckbox) {
@@ -564,19 +538,18 @@ function applyDateMarketRules() {
     }
 }
 
-// ✅ 页面加载 + 任意 checkbox 变动时触发限制检查
+// ✅ 页面加载监听
 function setupBetListeners() {
-    // ✅ 所有 checkbox 都监听
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', function () {
             updateTotals();
-            applyDateMarketRules();  // 不管是下注行或表头，都执行限制逻辑
+            applyDateMarketRules();
         });
     });
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    // 空格/Enter 跳格逻辑
+    // 空格/Enter 跳格
     const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
     inputs.forEach((input, idx) => {
         input.addEventListener("keydown", function (e) {
@@ -596,24 +569,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // ✅ 页面刷新后检查是否要显示下注详情弹窗
+    // 刷新后是否显示下注详情
     const savedPopup = localStorage.getItem("bet_popup");
     if (savedPopup) {
         showBetPopup(savedPopup);
         localStorage.removeItem("bet_popup");
     }
 
-    // ✅ 金额或号码变动时自动计算
+    // 输入变动自动计算
     document.querySelectorAll('input[type="text"], select').forEach(input => {
         input.addEventListener('input', updateTotals);
     });
 
-    // ✅ 包括所有勾选框（含下注行）
+    // 勾选框变动：计算+规则
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', function () {
             updateTotals();
-
-            // ✅ 只要变动了日期或市场的 checkbox，就重新应用规则
             if (
                 this.name?.startsWith('date') ||
                 this.name?.startsWith('market') ||
@@ -625,10 +596,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // ✅ 启用限制逻辑监听器
+    // 限制逻辑监听器
     setupBetListeners();
 
-    // ✅ reset 后重新计算与套用限制
+    // reset 后重新计算
     document.querySelector('button[type="reset"]').addEventListener('click', function () {
         setTimeout(() => {
             updateTotals();
@@ -636,7 +607,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 100);
     });
 
-    // ✅ 当总控勾着时，修改第1行金额会自动同步到其余行
+    // 当总控勾着时，修改第1行金额自动同步
     ['B','S','A','C'].forEach(col => {
       const master = document.getElementById('fill' + col);
       const first = document.querySelector(`input[name="${col}1"]`);
@@ -650,22 +621,18 @@ document.addEventListener("DOMContentLoaded", function () {
     updateTotals();
 });
 
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("error") === "cutoff") {
-        alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
-        history.replaceState({}, document.title, location.pathname)
-    }
-
-    if (params.get("error") === "limit") {
-        const number = params.get("number") || '';
-        const market = params.get("market") || '';
-        const date = params.get("date") || '';
-        alert(`⚠️ ${date} 市场 ${market} 中号码 ${number} 的预计奖金已超过 RM10000，下注取消`);
-
-        // 清除参数，防止刷新重复弹窗
-        history.replaceState({}, document.title, location.pathname);
-    }
-
+// URL 参数提示
+const params = new URLSearchParams(window.location.search);
+if (params.get("error") === "cutoff") {
+    alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
+    history.replaceState({}, document.title, location.pathname)
+}
+if (params.get("error") === "limit") {
+    const number = params.get("number") || '';
+    const market = params.get("market") || '';
+    const date = params.get("date") || '';
+    alert(`⚠️ ${date} 市场 ${market} 中号码 ${number} 的预计奖金已超过 RM10000，下注取消`);
+    history.replaceState({}, document.title, location.pathname);
+}
 </script>
 {% endblock %}
-
