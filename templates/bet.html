@@ -227,16 +227,17 @@ function updateTotals() {
     }
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
-
 function handleBet() {
+    // —— 时限检查（保持原逻辑） ——
     const malaysiaNow = new Date(
         new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
     );
     const cutoff = new Date(malaysiaNow);
     cutoff.setHours(19, 0, 0, 0);
 
+    // 收集“全局已选”的日期索引与市场键，用于截止判断
     const selectedDateIndexes = new Set();
-    const selectedMarketKeys = new Set();
+    const selectedMarketKeys  = new Set();
 
     for (let i = 1; i <= 12; i++) {
         const number = document.querySelector(`input[name="number${i}"]`)?.value.trim();
@@ -246,34 +247,37 @@ function handleBet() {
             const checkbox = document.querySelector(`input[name="date${i}_${d}"]`);
             if (checkbox?.checked) selectedDateIndexes.add(d);
         }
-
         for (const m of ['M','P','T','S','B','K','W','H','E']) {
             const checkbox = document.querySelector(`input[name="market${i}_${m}"]`);
             if (checkbox?.checked) selectedMarketKeys.add(m);
         }
     }
 
+    // 生成“dd/mm”标签（两位数）用于比较今天是否被选择
     const dateLabels = Array.from(selectedDateIndexes).map(d => {
-        const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
+        const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement
+            .textContent.trim().split('\n').pop().trim();   // 例如 "27/8"
         const [day, month] = rawLabel.split('/').map(n => n.padStart(2, '0'));
-        return `${day}/${month}`;
+        return `${day}/${month}`;                            // "27/08"
     });
-
-    const selectedDates = dateLabels.length > 0 ? dateLabels : ['未选日期'];
-    const selectedMarkets = Array.from(selectedMarketKeys).join('') || '未选市场';
 
     const today = malaysiaNow;
     const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}`;
-    if (selectedDates.includes(todayStr) && malaysiaNow >= cutoff) {
+    if (dateLabels.includes(todayStr) && malaysiaNow >= cutoff) {
         alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
         return false;
     }
 
+    // —— 统计总额 + 构建「日期 ➜ 市场 ➜ 号码行」分组 ——
     let total = 0;
-    let betLines = [];
+    const grouped = {};     // { '27/08': { 'M': ['1234=1B 1S', ...], 'P': [...] } }
+    const dateOrder = [];   // 按表头顺序记录出现过的日期（已是 dd/mm 两位数）
+
+    const addDateOnce = (d) => { if (!dateOrder.includes(d)) dateOrder.push(d); };
+    const MARKET_ORDER_PRINT = ['M','P','T','S','B','K','W','H','E'];
 
     for (let i = 1; i <= 12; i++) {
-        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        const num  = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!num) continue;
 
         const type = document.querySelector(`select[name="type${i}"]`)?.value;
@@ -282,46 +286,72 @@ function handleBet() {
         const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
         const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
 
-        let line = `${num} =`;
-        if (B) line += ` ${B}B`;
-        if (S) line += ` ${S}S`;
-        if (A) line += ` ${A}A`;
-        if (C) line += ` ${C}C`;
+        // 行显示：按你要求把 "=" 两侧的空格去掉
+        let line = `${num}=`;
+        if (B) line += `${B}B `;
+        if (S) line += `${S}S `;
+        if (A) line += `${A}A `;
+        if (C) line += `${C}C `;
+        line = line.trimRight();
 
-        if (type === 'IBox') line += ' (IBox)';
-        if (type === 'Box') line += ' (Box)';
-
+        // 累加总额（用你页面上的行合计）
         const row = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
         total += row;
-        betLines.push(line);
+
+        // 该行选中的日期（dd/mm，两位）与市场
+        const rowDates = [];
+        for (let d = 0; d < 7; d++) {
+            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (cb?.checked) {
+                const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement
+                    .textContent.trim().split('\n').pop().trim();
+                const [day, month] = rawLabel.split('/').map(n => n.padStart(2,'0'));
+                rowDates.push(`${day}/${month}`);
+            }
+        }
+        const rowMarkets = [];
+        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+            const cb = document.querySelector(`input[name="market${i}_${m}"]`);
+            if (cb?.checked) rowMarkets.push(m);
+        }
+
+        // 把该行分发到「每个日期 × 每个市场」的小组里
+        for (const d of rowDates) {
+            addDateOnce(d);
+            if (!grouped[d]) grouped[d] = {};
+            for (const m of rowMarkets) {
+                if (!grouped[d][m]) grouped[d][m] = [];
+                grouped[d][m].push(line);
+            }
+        }
     }
-    // ✅ 检查是否有同一号码+市场+日期 总 win_amount 超过 RM10000
+
+    // —— 中奖上限检测（保持原逻辑） ——
     const MAX_WIN = 10000;
     const betMap = {};  // 结构：{ '6556_M_17/07': total_win }
-
     for (let i = 1; i <= 12; i++) {
         const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!num) continue;
 
         const win = parseFloat(document.querySelector(`input[name="win_amount${i}"]`)?.value) || 0;
 
-        const selectedDates = [];
+        const selectedDatesRow = [];
         for (let d = 0; d < 7; d++) {
             const cb = document.querySelector(`input[name="date${i}_${d}"]`);
             if (cb?.checked) {
-                const label = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
-                selectedDates.push(label);  // 如 17/07
+                const label = document.getElementById(`select_date_${d}`)?.parentElement
+                    .textContent.trim().split('\n').pop().trim(); // 可能是 27/8
+                selectedDatesRow.push(label);
             }
         }
-
-        const selectedMarkets = [];
+        const selectedMarketsRow = [];
         for (const m of ['M','P','T','S','B','K','W','H','E']) {
             const cb = document.querySelector(`input[name="market${i}_${m}"]`);
-            if (cb?.checked) selectedMarkets.push(m);
+            if (cb?.checked) selectedMarketsRow.push(m);
         }
 
-        for (const d of selectedDates) {
-            for (const m of selectedMarkets) {
+        for (const d of selectedDatesRow) {
+            for (const m of selectedMarketsRow) {
                 const key = `${num}_${m}_${d}`;
                 betMap[key] = (betMap[key] || 0) + win;
                 if (betMap[key] > MAX_WIN) {
@@ -335,18 +365,33 @@ function handleBet() {
     const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
     if (!confirm(confirmMsg)) return false;
 
-    // ✅ 弹出下注详情弹窗（不影响 form 提交）
-    setTimeout(() => {
-        const formattedTotal = Number.isInteger(total) ? total : total.toFixed(2);
-        const finalText = selectedDates.map(date => {
-            return `${date}\n${selectedMarkets}\n${betLines.join('\n')}\nGT = ${formattedTotal}`
-        }).join('\n\n');
+    // —— 组装弹窗文本：日期标题 ➜ 按市场顺序列出号码 ——
+    const formattedTotal = Number.isInteger(total) ? total : total.toFixed(2);
+    const sections = [];
 
+    for (const d of dateOrder) {
+        if (!grouped[d]) continue;
+        sections.push(d);
+        for (const m of MARKET_ORDER_PRINT) {
+            const list = grouped[d][m];
+            if (list && list.length) {
+                sections.push(m);
+                sections.push(list.join('\n'));
+            }
+        }
+        // 各日期之间空一行
+        sections.push('');
+    }
+    sections.push(`GT = ${formattedTotal}`);
+    const finalText = sections.join('\n').replace(/\n{3,}/g, '\n\n'); // 清理多余空行
+
+    // 弹窗显示（不阻止提交）
+    setTimeout(() => {
         localStorage.setItem("bet_popup", finalText);
         showBetPopup(finalText);
-    }, 100);  // 延迟一点点，确保表单已成功触发
+    }, 100);
 
-    return true;  // ✅ 允许真正提交表单
+    return true; // 允许提交
 }
 function confirmResult() {
     const modal = document.getElementById("resultModal");
@@ -623,3 +668,4 @@ document.addEventListener("DOMContentLoaded", function () {
 
 </script>
 {% endblock %}
+
