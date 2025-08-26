@@ -14,17 +14,40 @@
             {% endfor %}
         </select>
     </div>
-{% endif %}
+    {% endif %}
 
     <table border="1" cellpadding="5">
         <thead>
             <tr>
                 <th rowspan="2">#</th>
                 <th rowspan="2">下注号码</th>
-                <th rowspan="2">B</th>
-                <th rowspan="2">S</th>
-                <th rowspan="2">A</th>
-                <th rowspan="2">C</th>
+
+                <!-- ✅ 在 B/S/A/C 表头下加入总控小格 -->
+                <th rowspan="2" style="text-align:center;width:70px">
+                  B<br>
+                  <input type="checkbox" id="fillB"
+                         onclick="copyAmountDown('B', this.checked)"
+                         style="width:16px;height:16px;">
+                </th>
+                <th rowspan="2" style="text-align:center;width:70px">
+                  S<br>
+                  <input type="checkbox" id="fillS"
+                         onclick="copyAmountDown('S', this.checked)"
+                         style="width:16px;height:16px;">
+                </th>
+                <th rowspan="2" style="text-align:center;width:70px">
+                  A<br>
+                  <input type="checkbox" id="fillA"
+                         onclick="copyAmountDown('A', this.checked)"
+                         style="width:16px;height:16px;">
+                </th>
+                <th rowspan="2" style="text-align:center;width:70px">
+                  C<br>
+                  <input type="checkbox" id="fillC"
+                         onclick="copyAmountDown('C', this.checked)"
+                         style="width:16px;height:16px;">
+                </th>
+
                 <th colspan="7">下注日期</th>
                 <th colspan="9">市场</th>
                 <th rowspan="2">种类</th>
@@ -131,6 +154,26 @@ const odds = {
     "E": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}}
 };
 
+// ✅ 勾选：把第1行的该列金额复制到第2~12行；取消：清空第2~12行该列金额
+function copyAmountDown(col, checked) {
+  const first = document.querySelector(`input[name="${col}1"]`);
+  const firstVal = first ? first.value : '';
+
+  for (let i = 2; i <= 12; i++) {
+    const el = document.querySelector(`input[name="${col}${i}"]`);
+    if (!el) continue;
+    el.value = checked ? firstVal : '';
+
+    // 触发事件，确保联动与合计会刷新
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  if (typeof updateTotals === 'function') {
+    try { updateTotals(); } catch(_) {}
+  }
+}
+
 function getHighestWin(markets, B, S, A, C, dateCount, type, number) {
     let max = 0;
     const comboFactor = (type === 'IBox') ? getCombinationCount(number) : 1;
@@ -177,7 +220,7 @@ function updateTotals() {
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
 
-        // 💰中奖金额计算
+        // 💰中奖金额计算（行内最高可能）
         const win = getHighestWin(markets, B, S, A, C, dateCount, type, number);
         document.querySelector(`input[name="win_amount${i}"]`).value = win.toFixed(2);
         document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
@@ -488,9 +531,7 @@ function setupBetListeners() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    // ... 原有内容保留
-    // 替换如下监听逻辑：
-
+    // 空格/Enter 跳格逻辑
     const inputs = Array.from(document.querySelectorAll("input[type='text'], select"));
     inputs.forEach((input, idx) => {
         input.addEventListener("keydown", function (e) {
@@ -498,7 +539,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 e.preventDefault();
                 if (idx + 1 < inputs.length) inputs[idx + 1].focus();
             }
-            if (e.key === "Enter" && this.name.startsWith("number")) {
+            if (e.key === "Enter" && this.name && this.name.startsWith("number")) {
                 e.preventDefault();
                 const match = this.name.match(/^number(\d+)$/);
                 if (match) {
@@ -529,10 +570,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // ✅ 只要变动了日期或市场的 checkbox，就重新应用规则
             if (
-                this.name.startsWith('date') ||
-                this.name.startsWith('market') ||
-                this.id.startsWith('select_date_') ||
-                this.id.startsWith('select_market_')
+                this.name?.startsWith('date') ||
+                this.name?.startsWith('market') ||
+                (this.id && this.id.startsWith('select_date_')) ||
+                (this.id && this.id.startsWith('select_market_'))
             ) {
                 applyDateMarketRules();
             }
@@ -542,11 +583,23 @@ document.addEventListener("DOMContentLoaded", function () {
     // ✅ 启用限制逻辑监听器
     setupBetListeners();
 
+    // ✅ reset 后重新计算与套用限制
     document.querySelector('button[type="reset"]').addEventListener('click', function () {
         setTimeout(() => {
             updateTotals();
             applyDateMarketRules();
         }, 100);
+    });
+
+    // ✅ 当总控勾着时，修改第1行金额会自动同步到其余行
+    ['B','S','A','C'].forEach(col => {
+      const master = document.getElementById('fill' + col);
+      const first = document.querySelector(`input[name="${col}1"]`);
+      if (first && master) {
+        first.addEventListener('input', () => {
+          if (master.checked) copyAmountDown(col, true);
+        });
+      }
     });
 
     updateTotals();
