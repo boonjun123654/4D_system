@@ -4,144 +4,112 @@
 <h2 style="margin-top: 20px;">🧾 查单记录</h2>
 
 <form method="get" action="/history" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center;">
-    <div>
-        <label><strong>日期范围：</strong></label><br>
-        <input type="date" name="start_date" value="{{ start_date }}" style="padding: 6px;">
-        <input type="date" name="end_date" value="{{ end_date }}" style="padding: 6px;">
-    </div>
+  <div>
+    <label><strong>日期范围：</strong></label><br>
+    <input type="date" name="start_date" value="{{ start_date }}" style="padding: 6px;">
+    <input type="date" name="end_date" value="{{ end_date }}" style="padding: 6px;">
+  </div>
 
-    {% if session.role == 'admin' %}
-    <div>
-        <label><strong>选择代理：</strong></label><br>
-        <select name="agent_id" style="padding: 6px; width: 150px;">
-            <option value="">全部</option>
-            {% for agent in agents %}
-                <option value="{{ agent.username }}" {% if request.args.get('agent_id') == agent.username %}selected{% endif %}>
-                    {{ agent.username }}
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-    {% endif %}
+  {% if session.role == 'admin' %}
+  <div>
+    <label><strong>选择代理：</strong></label><br>
+    <select name="agent_id" style="padding: 6px; width: 150px;">
+      <option value="">全部</option>
+      {% for agent in agents %}
+        <option value="{{ agent.username }}" {% if request.args.get('agent_id') == agent.username %}selected{% endif %}>{{ agent.username }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
 
-    <div>
-        <button type="submit" style="padding: 8px 20px; font-size: 15px;">🔍 查找</button>
-    </div>
+  <div>
+    <button type="submit" style="padding: 8px 20px; font-size: 15px;">🔍 查找</button>
+  </div>
 </form>
 
 <hr>
 
-{# ========== 新：按订单聚合显示（orders_by_date） ========== #}
 {% if orders_by_date and orders_by_date|length > 0 %}
   {% for date, orders in orders_by_date.items() %}
-    <div style="background: #f2f2f2; padding: 10px; margin-top: 20px; font-weight: bold;">
-      📅 {{ date }}
-    </div>
+    <div style="background: #f2f2f2; padding: 10px; margin-top: 20px; font-weight: bold;">📅 {{ date }}</div>
 
     <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
       {% for order in orders %}
-
-        {# 市场顺序 #}
         {% set market_order = ['M','P','T','S','B','K','W','H','E'] %}
 
-        {# 只统计“当前这一天”实际出现过的市场（从行里看） #}
-        {% set ms_list = [] %}
-        {% for m in market_order %}
-          {% for ln in order.lines %}
-            {% if date in (ln.dates or []) and m in (ln.markets or []) %}
-              {% if m not in ms_list %}{% set _ = ms_list.append(m) %}{% endif %}
-            {% endif %}
-          {% endfor %}
-        {% endfor %}
-        {% set ms_str = ms_list | join('') %}
-
-        {# 复制用的分组文本：日期 ➜ 市场（只列当前这一天有单的市场与号码） #}
+        {# ==== 复制用：按【日期→市场】分段组织文本 ==== #}
         {% set payload_lines = [] %}
         {% set _ = payload_lines.append(date) %}
         {% for m in market_order %}
-          {% set wrote_header = 0 %}
+          {% set ns = namespace(header_printed=false) %}
           {% for ln in order.lines %}
             {% if date in (ln.dates or []) and m in (ln.markets or []) %}
-              {% if wrote_header == 0 %}
+              {% if not ns.header_printed %}
                 {% set _ = payload_lines.append(m) %}
-                {% set wrote_header = 1 %}
+                {% set ns.header_printed = true %}
               {% endif %}
               {% set parts = [] %}
               {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
               {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
               {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
               {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
-              {% set line_txt = ln.number ~ '=' ~ (parts|join(' ')) ~ ((' (' ~ ln.type ~ ')') if ln.type != '正字' else '') %}
-              {% set _ = payload_lines.append(line_txt) %}
+              {% set _ = payload_lines.append(ln.number ~ '=' ~ (parts|join(' ')) ~ ((' (' ~ ln.type ~ ')') if ln.type != '正字' else '')) %}
             {% endif %}
           {% endfor %}
         {% endfor %}
-
         {% set copy_payload = (payload_lines|join("\n")) ~ "\nGT=" ~ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) %}
 
         <div class="order-card" style="width: 360px; border: 1px solid #ddd; padding: 12px; border-radius: 10px;
-            {% if order.status == 'delete' %}
-                background-color: #cfc8ca; color: #000000; opacity: 0.85;
-            {% else %}
-                background-color: #fff;
-            {% endif %}
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.05); font-family: monospace;
-            display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          {% if order.status == 'delete' %}background-color:#cfc8ca;color:#000;opacity:.85;{% else %}background-color:#fff;{% endif %}
+          box-shadow: 2px 2px 5px rgba(0,0,0,0.05); font-family: monospace; display:flex; flex-direction:column; justify-content:space-between;">
 
-          {# 顶部只显示代理 #}
-          <div style="font-size: 14px; background: #f8f8f8; padding: 6px 8px; border-radius: 6px; margin-bottom: 8px;">
+          <div style="font-size: 14px; background:#f8f8f8; padding:6px 8px; border-radius:6px; margin-bottom:8px;">
             👤 <strong>代理：</strong>{{ order.agent_id }}
           </div>
 
-          {# 主体：当天、市场、号码行（号码行仍展示整单行；如需也按市场分段显示可再改） #}
-          <div style="flex-grow: 1; margin-bottom: 10px; font-size: 14px; line-height: 1.6;">
+          {# ==== 卡片显示：按【日期→市场】分段输出 ==== #}
+          <div style="flex-grow:1; margin-bottom:10px; font-size:14px; line-height:1.6;">
             <div>{{ date }}</div>
-            {% if ms_str %}<div>{{ ms_str }}</div>{% endif %}
 
-            <div style="margin-top:0;">
+            {% for m in market_order %}
+              {% set ns = namespace(header_printed=false) %}
               {% for ln in order.lines %}
-                {% set show_this = date in (ln.dates or []) %}
-                {% if show_this %}
+                {% if date in (ln.dates or []) and m in (ln.markets or []) %}
+                  {% if not ns.header_printed %}
+                    <div>{{ m }}</div>
+                    {% set ns.header_printed = true %}
+                  {% endif %}
                   {% set parts = [] %}
                   {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
                   {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
                   {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
                   {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
-                  <div style="padding:0; margin:0;">
-                    {{ ln.number }}={{ parts|join(' ') }}{% if ln.type != '正字' %} ({{ ln.type }}){% endif %}
-                  </div>
+                  <div>{{ ln.number }}={{ parts|join(' ') }}{% if ln.type != '正字' %} ({{ ln.type }}){% endif %}</div>
                 {% endif %}
               {% endfor %}
-            </div>
+            {% endfor %}
 
-            <div style="margin-top:0;">
-              GT={{ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) }}
-            </div>
+            <div>GT={{ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) }}</div>
           </div>
 
-          {# 底部按钮：复制 / 删除（锁注禁删） #}
           <div style="display:flex; gap:8px; align-items:center;">
-            <button type="button"
-                    class="copy-btn"
+            <button type="button" class="copy-btn"
                     data-copy="{{ copy_payload | e }}"
-                    style="flex:1; padding: 6px 10px; background:#f0f0f0; border:1px solid #ddd; border-radius:6px; cursor:pointer;">
+                    style="flex:1; padding:6px 10px; background:#f0f0f0; border:1px solid #ddd; border-radius:6px; cursor:pointer;">
               复制
             </button>
 
             {% if order.status == 'locked' %}
-              <button type="button" disabled style="flex:1; padding:6px 10px; background:#ccc; color:#666; border:none; border-radius:6px; cursor:not-allowed;">
+              <button type="button" disabled style="flex:1; padding:6px 10px; background:#ccc; color:#666; border:none; border-radius:6px;">
                 已锁注
               </button>
             {% elif order.status == 'delete' %}
-              <span style="flex:1; text-align:center; padding:6px 10px; background:#0a0a0a; color:#fff; border-radius:6px;">
-                🗑️ 已删除
-              </span>
+              <span style="flex:1; text-align:center; padding:6px 10px; background:#0a0a0a; color:#fff; border-radius:6px;">🗑️ 已删除</span>
             {% else %}
-              <form method="post"
-                    style="flex:1"
+              <form method="post" style="flex:1"
                     action="{{ url_for('delete_order', order_code=order.order_code) }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
                     onsubmit="return confirm('确认删除此订单？');">
-                <button type="submit" style="width:100%; padding:6px 10px; background-color:#dc3545; color:white; border:none; border-radius:6px;">
+                <button type="submit" style="width:100%; padding:6px 10px; background:#dc3545; color:#fff; border:none; border-radius:6px;">
                   删除
                 </button>
               </form>
@@ -153,72 +121,53 @@
   {% endfor %}
 {% endif %}
 
-{# ========== 兼容旧数据：无订单号的历史行（legacy_grouped） ========== #}
 {% if legacy_grouped and legacy_grouped|length > 0 %}
   <div style="margin: 30px 0 10px; font-weight:bold;">📜 历史旧单（无订单号）</div>
   {% for date, items in legacy_grouped.items() %}
-    <div style="background: #f2f2f2; padding: 10px; margin-top: 12px; font-weight: bold;">
-        📅 {{ date }}
-    </div>
-    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
+    <div style="background:#f2f2f2; padding:10px; margin-top:12px; font-weight:bold;">📅 {{ date }}</div>
+    <div style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom:30px;">
       {% for bet in items %}
-        <div style="width: 260px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;
-            {% if bet.status == 'delete' %}
-                background-color: #cfc8ca; color: #000000; opacity: 0.6;
+        <div style="width:260px; border:1px solid #ddd; padding:10px; border-radius:8px;
+             {% if bet.status == 'delete' %}background:#cfc8ca;color:#000;opacity:.6;{% else %}background:#fff;{% endif %}
+             box-shadow:2px 2px 5px rgba(0,0,0,0.05); font-family:monospace; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="font-size:14px; background:#f8f8f8; padding:4px 8px; border-radius:4px; margin-bottom:6px;">
+            👤 <strong>代理：</strong>{{ bet.agent_id }}
+          </div>
+          <div style="flex-grow:1; margin-bottom:40px; font-size:14px;">
+            {% for d in bet.dates %}
+              <div><strong>{{ d }}</strong></div>
+              <div>{{ bet.markets | join('') }}</div>
+            {% endfor %}
+            <div>
+              {{ bet.number }} =
+              {% if bet.b %}{{ "%.1f"|format(bet.b)|replace(".0","") }}B {% endif %}
+              {% if bet.s %}{{ "%.1f"|format(bet.s)|replace(".0","") }}S {% endif %}
+              {% if bet.a %}{{ "%.1f"|format(bet.a)|replace(".0","") }}A {% endif %}
+              {% if bet.c %}{{ "%.1f"|format(bet.c)|replace(".0","") }}C {% endif %}
+              {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
+            </div>
+            <div>GT = {{ "%.2f"|format(bet.total)|replace(".00","") }}</div>
+            {% if bet.win_amount %}<div style="color:#28a745;">WIN = {{ "%.2f"|format(bet.win_amount)|replace(".00","") }}</div>{% endif %}
+          </div>
+          <div style="display:flex; gap:8px;">
+            <a href="/bet?ref={{ bet.id }}" style="flex:1;">
+              <button type="button" style="width:100%; padding:6px; background:#007bff; color:#fff; border:none; border-radius:4px;">重新下注</button>
+            </a>
+            {% if bet.status == 'locked' %}
+              <button type="button" disabled style="flex:1; padding:6px; background:#ccc; color:#666; border:none; border-radius:4px;">已锁注</button>
+            {% elif bet.status == 'delete' %}
+              <div style="flex:1; text-align:center; padding:6px; background:#0a0a0a; color:#fff; border-radius:4px;">🗑️ 已删除</div>
             {% else %}
-                background-color: #fff;
+              <form method="post" style="flex:1"
+                    action="{{ url_for('delete_bet', bet_id=bet.id) }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
+                    onsubmit="return confirm('确认删除此下注？');">
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="end_date" value="{{ end_date }}">
+                {% if selected_agent %}<input type="hidden" name="agent_id" value="{{ selected_agent }}">{% endif %}
+                <button type="submit" style="width:100%; padding:6px; background:#dc3545; color:#fff; border:none; border-radius:4px; font-size:15px;">删除下注</button>
+              </form>
             {% endif %}
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.05); font-family: monospace;
-            display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-
-            <div style="font-size: 14px; background: #f8f8f8; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px;">
-                👤 <strong>代理：</strong>{{ bet.agent_id }}
-            </div>
-
-            <div style="flex-grow: 1; margin-bottom: 40px; font-size: 14px;">
-                {% for d in bet.dates %}
-                    <div><strong>{{ d }}</strong></div>
-                    <div>{{ bet.markets | join('') }}</div>
-                {% endfor %}
-                <div>
-                    {{ bet.number }} =
-                    {% if bet.b %}{{ "%.1f"|format(bet.b)|replace(".0", "") }}B {% endif %}
-                    {% if bet.s %}{{ "%.1f"|format(bet.s)|replace(".0", "") }}S {% endif %}
-                    {% if bet.a %}{{ "%.1f"|format(bet.a)|replace(".0", "") }}A {% endif %}
-                    {% if bet.c %}{{ "%.1f"|format(bet.c)|replace(".0", "") }}C {% endif %}
-                    {% if bet.type != '正字' %}({{ bet.type }}){% endif %}
-                </div>
-                <div>GT = {{ "%.2f"|format(bet.total)|replace(".00", "") }}</div>
-                {% if bet.win_amount %}
-                    <div style="color: #28a745;">WIN = {{ "%.2f"|format(bet.win_amount)|replace(".00", "") }}</div>
-                {% endif %}
-            </div>
-
-            <div style="display: flex; gap: 8px;">
-                <a href="/bet?ref={{ bet.id }}" style="flex: 1;">
-                    <button type="button" style="width: 100%; padding: 6px; background-color:#007bff; color:white; border:none; border-radius:4px;">重新下注</button>
-                </a>
-
-                {% if bet.status == 'locked' %}
-                    <button type="button" disabled style="flex: 1; padding: 6px; background-color:#ccc; color:#666; border:none; border-radius:4px; cursor: not-allowed;">
-                        已锁注
-                    </button>
-                {% elif bet.status == 'delete' %}
-                    <div style="flex: 1; text-align: center; padding: 6px; background-color: #0a0a0a; color: #ffffff; border-radius: 4px;">
-                        🗑️ 已删除
-                    </div>
-                {% else %}
-                    <form method="post"
-                          style="flex: 1"
-                          action="{{ url_for('delete_bet', bet_id=bet.id) }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
-                          onsubmit="return confirm('确认删除此下注？');">
-                        <input type="hidden" name="start_date" value="{{ start_date }}">
-                        <input type="hidden" name="end_date" value="{{ end_date }}">
-                        {% if selected_agent %}<input type="hidden" name="agent_id" value="{{ selected_agent }}">{% endif %}
-                        <button type="submit" style="width: 100%; padding: 6px; background-color:#dc3545; color:white; border:none; border-radius:4px; font-size: 15px;">删除下注</button>
-                    </form>
-                {% endif %}
-            </div>
+          </div>
         </div>
       {% endfor %}
     </div>
@@ -226,7 +175,7 @@
 {% endif %}
 
 {% if (not orders_by_date or orders_by_date|length == 0) and (not legacy_grouped or legacy_grouped|length == 0) %}
-  <p style="color: #cc0000; font-size: 16px;">❗ 没有记录</p>
+  <p style="color:#cc0000; font-size:16px;">❗ 没有记录</p>
 {% endif %}
 
 <script>
@@ -237,10 +186,8 @@ document.addEventListener('click', function(e){
   navigator.clipboard.writeText(text).then(()=>{
     alert('✅ 已复制到剪贴板');
   }).catch(()=>{
-    // 兼容少数环境
     const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
+    ta.value = text; document.body.appendChild(ta);
     ta.select(); document.execCommand('copy');
     document.body.removeChild(ta);
     alert('✅ 已复制到剪贴板');
@@ -249,11 +196,11 @@ document.addEventListener('click', function(e){
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("deleted") === "1") {
-    alert("✅ 已删除下注记录");
+  alert("✅ 已删除下注记录");
 } else if (params.get("error") === "unauthorized") {
-    alert("❌ 无权限删除该下注记录");
+  alert("❌ 无权限删除该下注记录");
 } else if (params.get("error") === "locked") {
-    alert("⚠️ 此下注记录已锁注，无法删除");
+  alert("⚠️ 此下注记录已锁注，无法删除");
 }
 history.replaceState({}, document.title, location.pathname);
 </script>
