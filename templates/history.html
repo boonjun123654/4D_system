@@ -40,26 +40,44 @@
 
     <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
       {% for order in orders %}
-        {# 计算日期范围与市场字符串 #}
-        {% set first_date = order.dates|first if order.dates else '' %}
-        {% set last_date  = order.dates|last  if order.dates else '' %}
-        {% set date_range = (first_date ~ '-' ~ last_date) if (order.dates and order.dates|length>1) else (first_date or '') %}
-        {% set market_order = 'MPTSHEBKW' %}
-        {% set ms = namespace(val='*') %}
-        {% for ch in market_order %}{% if ch in order.markets %}{% set ms.val = ms.val + ch %}{% endif %}{% endfor %}
 
-        {# 预先拼接复制文本（严格按你要的格式） #}
-        {% set lines_text = [] %}
-        {% for ln in order.lines %}
-          {% set parts = [] %}
-          {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
-          {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
-          {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
-          {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
-          {% set line_txt = ln.number ~ '=' ~ (parts|join(' ')) ~ ((' (' ~ ln.type ~ ')') if ln.type != '正字' else '') %}
-          {% set _ = lines_text.append(line_txt) %}
+        {# 市场顺序 #}
+        {% set market_order = ['M','P','T','S','B','K','W','H','E'] %}
+
+        {# 只统计“当前这一天”实际出现过的市场（从行里看） #}
+        {% set ms_list = [] %}
+        {% for m in market_order %}
+          {% for ln in order.lines %}
+            {% if date in (ln.dates or []) and m in (ln.markets or []) %}
+              {% if m not in ms_list %}{% set _ = ms_list.append(m) %}{% endif %}
+            {% endif %}
+          {% endfor %}
         {% endfor %}
-        {% set copy_payload = (date_range ~ "\n" ~ ms.val ~ "\n" ~ (lines_text|join("\n")) ~ "\nGT=" ~ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) ) %}
+        {% set ms_str = ms_list | join('') %}
+
+        {# 复制用的分组文本：日期 ➜ 市场（只列当前这一天有单的市场与号码） #}
+        {% set payload_lines = [] %}
+        {% set _ = payload_lines.append(date) %}
+        {% for m in market_order %}
+          {% set wrote_header = 0 %}
+          {% for ln in order.lines %}
+            {% if date in (ln.dates or []) and m in (ln.markets or []) %}
+              {% if wrote_header == 0 %}
+                {% set _ = payload_lines.append(m) %}
+                {% set wrote_header = 1 %}
+              {% endif %}
+              {% set parts = [] %}
+              {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
+              {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
+              {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
+              {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
+              {% set line_txt = ln.number ~ '=' ~ (parts|join(' ')) ~ ((' (' ~ ln.type ~ ')') if ln.type != '正字' else '') %}
+              {% set _ = payload_lines.append(line_txt) %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+
+        {% set copy_payload = (payload_lines|join("\n")) ~ "\nGT=" ~ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) %}
 
         <div class="order-card" style="width: 360px; border: 1px solid #ddd; padding: 12px; border-radius: 10px;
             {% if order.status == 'delete' %}
@@ -75,21 +93,24 @@
             👤 <strong>代理：</strong>{{ order.agent_id }}
           </div>
 
-          {# 主体：日期范围、市场、号码行 #}
+          {# 主体：当天、市场、号码行（号码行仍展示整单行；如需也按市场分段显示可再改） #}
           <div style="flex-grow: 1; margin-bottom: 10px; font-size: 14px; line-height: 1.6;">
-            {% if date_range %}<div>{{ date_range }}</div>{% endif %}
-            {% if order.markets %}<div>{{ ms.val }}</div>{% endif %}
+            <div>{{ date }}</div>
+            {% if ms_str %}<div>{{ ms_str }}</div>{% endif %}
 
             <div style="margin-top:0;">
               {% for ln in order.lines %}
-                {% set parts = [] %}
-                {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
-                {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
-                {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
-                {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
-                <div style="padding:0; margin:0;">
-                  {{ ln.number }}={{ parts|join(' ') }}{% if ln.type != '正字' %} ({{ ln.type }}){% endif %}
-                </div>
+                {% set show_this = date in (ln.dates or []) %}
+                {% if show_this %}
+                  {% set parts = [] %}
+                  {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
+                  {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
+                  {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
+                  {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
+                  <div style="padding:0; margin:0;">
+                    {{ ln.number }}={{ parts|join(' ') }}{% if ln.type != '正字' %} ({{ ln.type }}){% endif %}
+                  </div>
+                {% endif %}
               {% endfor %}
             </div>
 
@@ -98,7 +119,7 @@
             </div>
           </div>
 
-          {# 底部按钮：复制 / 重新下注整单 / 删除（锁注禁删） #}
+          {# 底部按钮：复制 / 删除（锁注禁删） #}
           <div style="display:flex; gap:8px; align-items:center;">
             <button type="button"
                     class="copy-btn"
@@ -193,9 +214,7 @@
                           onsubmit="return confirm('确认删除此下注？');">
                         <input type="hidden" name="start_date" value="{{ start_date }}">
                         <input type="hidden" name="end_date" value="{{ end_date }}">
-                        {% if selected_agent %}
-                            <input type="hidden" name="agent_id" value="{{ selected_agent }}">
-                        {% endif %}
+                        {% if selected_agent %}<input type="hidden" name="agent_id" value="{{ selected_agent }}">{% endif %}
                         <button type="submit" style="width: 100%; padding: 6px; background-color:#dc3545; color:white; border:none; border-radius:4px; font-size: 15px;">删除下注</button>
                     </form>
                 {% endif %}
@@ -209,6 +228,7 @@
 {% if (not orders_by_date or orders_by_date|length == 0) and (not legacy_grouped or legacy_grouped|length == 0) %}
   <p style="color: #cc0000; font-size: 16px;">❗ 没有记录</p>
 {% endif %}
+
 <script>
 document.addEventListener('click', function(e){
   const btn = e.target.closest('.copy-btn');
@@ -237,11 +257,5 @@ if (params.get("deleted") === "1") {
 }
 history.replaceState({}, document.title, location.pathname);
 </script>
+
 {% endblock %}
-
-
-
-
-
-
-
