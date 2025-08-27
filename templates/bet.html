@@ -219,113 +219,138 @@ function updateTotals() {
     }
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
-
-/* ✅ 重新实现：按“日期 ➜ 市场”分组，构建弹窗文本 */
+/* ✅ 按“日期 → 市场组合”分组，并合并相同号码的金额后显示 */
 function handleBet() {
-    // —— 截止时间检查 ——
+    // —— 截止时间检查 —— 
     const malaysiaNow = new Date(
         new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
     );
     const cutoff = new Date(malaysiaNow);
     cutoff.setHours(19, 0, 0, 0);
 
-    // 统计全局选中的日期（用于截止判断）
-    const selectedDateIndexes = new Set();
+    // 本页表头显示的 7 天日期标签 -> 统一转 dd/mm（两位）
+    const headerDateToDdmm = (dIndex) => {
+        const raw = document.getElementById(`select_date_${dIndex}`)?.parentElement
+            .textContent.trim().split('\n').pop().trim();            // 例如 27/8
+        if (!raw) return '';
+        const [d, m] = raw.split('/').map(n => n.padStart(2,'0'));   // -> 27 / 08
+        return `${d}/${m}`;                                          // 27/08
+    };
+
+    // 收集“页面中实际有号码的行”所选日期（用于截止检查）
+    const pickedDatesSet = new Set();
     for (let i = 1; i <= 12; i++) {
-        const hasNumber = (document.querySelector(`input[name="number${i}"]`)?.value.trim() || '') !== '';
-        if (!hasNumber) continue;
+        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        if (!num) continue;
         for (let d = 0; d < 7; d++) {
-            const checkbox = document.querySelector(`input[name="date${i}_${d}"]`);
-            if (checkbox?.checked) selectedDateIndexes.add(d);
+            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
+            if (cb?.checked) pickedDatesSet.add(headerDateToDdmm(d));
         }
     }
-    const dateLabels = Array.from(selectedDateIndexes).map(d => {
-        const rawLabel = document.getElementById(`select_date_${d}`)?.parentElement
-            .textContent.trim().split('\n').pop().trim(); // 27/8
-        const [day, month] = rawLabel.split('/').map(n => n.padStart(2, '0'));
-        return `${day}/${month}`; // 27/08
-    });
-    const todayStr = `${String(malaysiaNow.getDate()).padStart(2, '0')}/${String(malaysiaNow.getMonth() + 1).padStart(2, '0')}`;
-    if (dateLabels.includes(todayStr) && malaysiaNow >= cutoff) {
+    const todayStr = `${String(malaysiaNow.getDate()).padStart(2,'0')}/${String(malaysiaNow.getMonth()+1).padStart(2,'0')}`;
+    if (pickedDatesSet.has(todayStr) && malaysiaNow >= cutoff) {
         alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
         return false;
     }
 
-    // —— 汇总总额、并把每行分发到【日期×市场】分组 ——
-    let total = 0;
-    const grouped = {};                 // { '27/08': { 'M': ['1234=1B 1S', ...], 'P': [...] } }
-    const dateOrder = [];               // 出现过的日期顺序
-    const addDateOnce = (d) => { if (!dateOrder.includes(d)) dateOrder.push(d); };
-    const MARKET_ORDER_PRINT = ['M','P','T','S','B','K','W','H','E'];
+    // —— 统计总额 & 按【日期 → 市场组合】分组，并在组合内合并相同号码金额 ——  
+    const MARKET_ORDER = ['M','P','T','S','B','K','W','H','E'];
+    const fmt = (v) => (Number.isInteger(v) ? String(v) : (Math.round(v*100)/100).toFixed(2).replace(/\.00$/,''));
+
+    let grandTotal = 0;
+
+    // 结构：
+    // grouped = {
+    //   '27/08': {
+    //      comboOrder: ['MKT','S','T'],
+    //      combos: {
+    //        'MKT': { order: ['1234|正字','3411|正字'], items: { '1234|正字': {num:'1234', type:'正字', B:1,S:0,A:0,C:0}, ... } },
+    //        'S':   {...},
+    //        'T':   {...}
+    //      }
+    //   }, ...
+    // }
+    const grouped = {};
+    const dateOrder = [];
+
+    const ensureDate = (ddmm) => {
+        if (!grouped[ddmm]) {
+            grouped[ddmm] = { comboOrder: [], combos: {} };
+            dateOrder.push(ddmm);
+        }
+        return grouped[ddmm];
+    };
+    const ensureCombo = (dateObj, comboKey) => {
+        if (!dateObj.combos[comboKey]) {
+            dateObj.combos[comboKey] = { order: [], items: {} };
+            dateObj.comboOrder.push(comboKey);
+        }
+        return dateObj.combos[comboKey];
+    };
 
     for (let i = 1; i <= 12; i++) {
-        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
+        const num  = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!num) continue;
 
-        const type = document.querySelector(`select[name="type${i}"]`)?.value;
+        const type = document.querySelector(`select[name="type${i}"]`)?.value || '正字';
         const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
         const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
         const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
         const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
 
-        // 行展示格式（等号无空格）
-        let line = `${num}=`;
-        if (B) line += `${B}B `;
-        if (S) line += `${S}S `;
-        if (A) line += `${A}A `;
-        if (C) line += `${C}C `;
-        line = line.trimEnd();
+        // 行总额（页面已有的 row-total 已经考虑 Box/IBox 的 factor 与日期/市场数）
+        const rowTotal = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
+        grandTotal += rowTotal;
 
-        // 行总额
-        const row = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
-        total += row;
-
-        // 行选中的日期（dd/mm，两位）与市场
+        // 该行的日期（dd/mm）与市场（按固定顺序）
         const rowDates = [];
         for (let d = 0; d < 7; d++) {
             const cb = document.querySelector(`input[name="date${i}_${d}"]`);
-            if (cb?.checked) {
-                const raw = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim();
-                const [day, month] = raw.split('/').map(n => n.padStart(2,'0'));
-                rowDates.push(`${day}/${month}`);
-            }
+            if (cb?.checked) rowDates.push(headerDateToDdmm(d));
         }
         const rowMarkets = [];
-        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+        for (const m of MARKET_ORDER) {
             const cb = document.querySelector(`input[name="market${i}_${m}"]`);
             if (cb?.checked) rowMarkets.push(m);
         }
+        if (!rowDates.length || !rowMarkets.length) continue;
 
-        // 分发
-        for (const d of rowDates) {
-            addDateOnce(d);
-            if (!grouped[d]) grouped[d] = {};
-            for (const m of rowMarkets) {
-                if (!grouped[d][m]) grouped[d][m] = [];
-                grouped[d][m].push(line);
+        // 市场组合 key：例如 "MKT"、"S"、"T"
+        const comboKey = rowMarkets.join('');
+
+        // 将该行分发到每个选中的日期的相应“市场组合”里，并合并相同号码（同一类型）
+        for (const ddmm of rowDates) {
+            const dObj = ensureDate(ddmm);
+            const cObj = ensureCombo(dObj, comboKey);
+
+            const itemKey = `${num}|${type}`;
+            if (!cObj.items[itemKey]) {
+                cObj.items[itemKey] = { num, type, B:0, S:0, A:0, C:0 };
+                cObj.order.push(itemKey);
             }
+            cObj.items[itemKey].B += B;
+            cObj.items[itemKey].S += S;
+            cObj.items[itemKey].A += A;
+            cObj.items[itemKey].C += C;
         }
     }
 
-    // —— 奖金上限检测（按 号码×市场×日期） ——
+    // —— 奖金上限检测（按 号码×单个市场×日期，不受“组合显示”影响） ——  
     const MAX_WIN = 10000;
-    const betMap = {};  // { '6556_M_27/08': total_win }
+    const betMap = {}; // { '6556_M_27/08': total_win }
     for (let i = 1; i <= 12; i++) {
         const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
         if (!num) continue;
+
         const win = parseFloat(document.querySelector(`input[name="win_amount${i}"]`)?.value) || 0;
 
         const dds = [];
         for (let d = 0; d < 7; d++) {
             const cb = document.querySelector(`input[name="date${i}_${d}"]`);
-            if (cb?.checked) {
-                const raw = document.getElementById(`select_date_${d}`)?.parentElement.textContent.trim().split('\n').pop().trim(); // 27/8
-                const [day, month] = raw.split('/').map(n => n.padStart(2,'0'));
-                dds.push(`${day}/${month}`); // 27/08
-            }
+            if (cb?.checked) dds.push(headerDateToDdmm(d));
         }
         const mms = [];
-        for (const m of ['M','P','T','S','B','K','W','H','E']) {
+        for (const m of MARKET_ORDER) {
             const cb = document.querySelector(`input[name="market${i}_${m}"]`);
             if (cb?.checked) mms.push(m);
         }
@@ -342,29 +367,40 @@ function handleBet() {
         }
     }
 
-    // —— 二次确认 ——
-    const confirmMsg = `下注总金额 = RM ${total.toFixed(2)}\n确认下注？`;
+    // —— 二次确认 ——  
+    const confirmMsg = `下注总金额 = RM ${grandTotal.toFixed(2)}\n确认下注？`;
     if (!confirm(confirmMsg)) return false;
 
-    // —— 组装弹窗文本（按日期→市场） ——
-    const formattedTotal = Number.isInteger(total) ? total : total.toFixed(2);
+    // —— 组装弹窗文本：按【日期 → 市场组合】，并在组合内按号码顺序输出合并后的金额 ——  
+    const formattedTotal = Number.isInteger(grandTotal) ? grandTotal : grandTotal.toFixed(2);
     const sections = [];
-    for (const d of dateOrder) {
-        if (!grouped[d]) continue;
-        sections.push(d);
-        for (const m of MARKET_ORDER_PRINT) {
-            const list = grouped[d][m];
-            if (list && list.length) {
-                sections.push(m);
-                sections.push(list.join('\n'));
+    for (const ddmm of dateOrder) {
+        const dObj = grouped[ddmm];
+        if (!dObj) continue;
+
+        sections.push(ddmm);
+        for (const comboKey of dObj.comboOrder) {
+            const cObj = dObj.combos[comboKey];
+            if (!cObj || !cObj.order.length) continue;
+
+            sections.push(`*${comboKey}`);
+            for (const itemKey of cObj.order) {
+                const it = cObj.items[itemKey];
+                const parts = [];
+                if (it.B) parts.push(`${fmt(it.B)}B`);
+                if (it.S) parts.push(`${fmt(it.S)}S`);
+                if (it.A) parts.push(`${fmt(it.A)}A`);
+                if (it.C) parts.push(`${fmt(it.C)}C`);
+                const typeSuffix = (it.type && it.type !== '正字') ? ` (${it.type})` : '';
+                sections.push(`${it.num}=${parts.join(' ')}${typeSuffix}`);
             }
         }
         sections.push(''); // 日期块之间空行
     }
-    sections.push(`GT = ${formattedTotal}`);
+    sections.push(`GT=${formattedTotal}`);
     const finalText = sections.join('\n').replace(/\n{3,}/g, '\n\n');
 
-    // 弹窗（不阻止提交）
+    // —— 弹窗（不阻止表单提交）——
     setTimeout(() => {
         localStorage.setItem("bet_popup", finalText);
         showBetPopup(finalText);
@@ -372,7 +408,6 @@ function handleBet() {
 
     return true;
 }
-
 function confirmResult() {
     const modal = document.getElementById("resultModal");
     if (modal) modal.remove();
@@ -636,3 +671,4 @@ if (params.get("error") === "limit") {
 }
 </script>
 {% endblock %}
+
