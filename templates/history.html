@@ -37,23 +37,39 @@
       {% for order in orders %}
         {% set market_order = ['M','P','T','S','B','K','W','H','E'] %}
 
-        {# ==== 复制用：按【日期→市场】分段组织文本 ==== #}
-        {% set payload_lines = [] %}
-        {% set _ = payload_lines.append(date) %}
-        {% for m in market_order %}
-          {% set ns = namespace(header_printed=false) %}
+        {# === 先收集本订单在“当前这一天”出现过的【市场组合】（按首次出现顺序） === #}
+        {% set combos_order = [] %}
+        {% for ln in order.lines %}
+          {% if date in (ln.dates or []) %}
+            {% set combo_list = [] %}
+            {% for m in market_order %}
+              {% if m in (ln.markets or []) %}{% set _ = combo_list.append(m) %}{% endif %}
+            {% endfor %}
+            {% set combo = combo_list|join('') %}
+            {% if combo and combo not in combos_order %}{% set _ = combos_order.append(combo) %}{% endif %}
+          {% endif %}
+        {% endfor %}
+
+        {# === 复制文本：按“日期 → 市场组合”分段 === #}
+        {% set payload_lines = [date] %}
+        {% for combo in combos_order %}
+          {% set _ = payload_lines.append('*' ~ combo) %}
           {% for ln in order.lines %}
-            {% if date in (ln.dates or []) and m in (ln.markets or []) %}
-              {% if not ns.header_printed %}
-                {% set _ = payload_lines.append(m) %}
-                {% set ns.header_printed = true %}
+            {% if date in (ln.dates or []) %}
+              {% set cl2 = [] %}
+              {% for m in market_order %}
+                {% if m in (ln.markets or []) %}{% set _ = cl2.append(m) %}{% endif %}
+              {% endfor %}
+              {% set combo2 = cl2|join('') %}
+              {% if combo2 == combo %}
+                {% set parts = [] %}
+                {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
+                {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
+                {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
+                {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
+                {% set line_txt = ln.number ~ '=' ~ (parts|join(' ')) ~ ((' (' ~ ln.type ~ ')') if ln.type != '正字' else '') %}
+                {% set _ = payload_lines.append(line_txt) %}
               {% endif %}
-              {% set parts = [] %}
-              {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
-              {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
-              {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
-              {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
-              {% set _ = payload_lines.append(ln.number ~ '=' ~ (parts|join(' ')) ~ ((' (' ~ ln.type ~ ')') if ln.type != '正字' else '')) %}
             {% endif %}
           {% endfor %}
         {% endfor %}
@@ -67,35 +83,35 @@
             👤 <strong>代理：</strong>{{ order.agent_id }}
           </div>
 
-          {# ==== 卡片显示：按【日期→市场】分段输出 ==== #}
+          {# === 卡片显示：按“日期 → 市场组合”分段 === #}
           <div style="flex-grow:1; margin-bottom:10px; font-size:14px; line-height:1.6;">
             <div>{{ date }}</div>
-
-            {% for m in market_order %}
-              {% set ns = namespace(header_printed=false) %}
+            {% for combo in combos_order %}
+              <div>*{{ combo }}</div>
               {% for ln in order.lines %}
-                {% if date in (ln.dates or []) and m in (ln.markets or []) %}
-                  {% if not ns.header_printed %}
-                    <div>{{ m }}</div>
-                    {% set ns.header_printed = true %}
+                {% if date in (ln.dates or []) %}
+                  {% set cl2 = [] %}
+                  {% for m in market_order %}
+                    {% if m in (ln.markets or []) %}{% set _ = cl2.append(m) %}{% endif %}
+                  {% endfor %}
+                  {% if (cl2|join('')) == combo %}
+                    {% set parts = [] %}
+                    {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
+                    {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
+                    {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
+                    {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
+                    <div>{{ ln.number }}={{ parts|join(' ') }}{% if ln.type != '正字' %} ({{ ln.type }}){% endif %}</div>
                   {% endif %}
-                  {% set parts = [] %}
-                  {% if ln.b and ln.b|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.b)).replace(".0","") ~ "B") %}{% endif %}
-                  {% if ln.s and ln.s|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.s)).replace(".0","") ~ "S") %}{% endif %}
-                  {% if ln.a and ln.a|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.a)).replace(".0","") ~ "A") %}{% endif %}
-                  {% if ln.c and ln.c|float > 0 %}{% set _ = parts.append(("%.1f"|format(ln.c)).replace(".0","") ~ "C") %}{% endif %}
-                  <div>{{ ln.number }}={{ parts|join(' ') }}{% if ln.type != '正字' %} ({{ ln.type }}){% endif %}</div>
                 {% endif %}
               {% endfor %}
             {% endfor %}
-
             <div>GT={{ (("%.0f"|format(order.gt_total)) if (order.gt_total|float).is_integer() else ("%.2f"|format(order.gt_total))) }}</div>
           </div>
 
           <div style="display:flex; gap:8px; align-items:center;">
             <button type="button" class="copy-btn"
                     data-copy="{{ copy_payload | e }}"
-                    style="flex:1; padding:6px 10px; background:#f0f0f0; border:1px solid #ddd; border-radius:6px; cursor:pointer;">
+                    style="flex:1; padding: 6px 10px; background:#f0f0f0; border:1px solid #ddd; border-radius:6px; cursor:pointer;">
               复制
             </button>
 
@@ -104,12 +120,15 @@
                 已锁注
               </button>
             {% elif order.status == 'delete' %}
-              <span style="flex:1; text-align:center; padding:6px 10px; background:#0a0a0a; color:#fff; border-radius:6px;">🗑️ 已删除</span>
+              <span style="flex:1; text-align:center; padding:6px 10px; background:#0a0a0a; color:#fff; border-radius:6px;">
+                🗑️ 已删除
+              </span>
             {% else %}
-              <form method="post" style="flex:1"
+              <form method="post"
+                    style="flex:1"
                     action="{{ url_for('delete_order', order_code=order.order_code) }}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_agent %}&agent_id={{ selected_agent }}{% endif %}"
                     onsubmit="return confirm('确认删除此订单？');">
-                <button type="submit" style="width:100%; padding:6px 10px; background:#dc3545; color:#fff; border:none; border-radius:6px;">
+                <button type="submit" style="width:100%; padding:6px 10px; background-color:#dc3545; color:white; border:none; border-radius:6px;">
                   删除
                 </button>
               </form>
@@ -121,6 +140,7 @@
   {% endfor %}
 {% endif %}
 
+{# ========== 兼容旧数据：无订单号的历史行（legacy_grouped）保持不变 ========== #}
 {% if legacy_grouped and legacy_grouped|length > 0 %}
   <div style="margin: 30px 0 10px; font-weight:bold;">📜 历史旧单（无订单号）</div>
   {% for date, items in legacy_grouped.items() %}
@@ -164,7 +184,7 @@
                 <input type="hidden" name="start_date" value="{{ start_date }}">
                 <input type="hidden" name="end_date" value="{{ end_date }}">
                 {% if selected_agent %}<input type="hidden" name="agent_id" value="{{ selected_agent }}">{% endif %}
-                <button type="submit" style="width:100%; padding:6px; background:#dc3545; color:#fff; border:none; border-radius:4px; font-size:15px;">删除下注</button>
+                <button type="submit" style="width: 100%; padding: 6px; background:#dc3545; color:white; border:none; border-radius:4px; font-size:15px;">删除下注</button>
               </form>
             {% endif %}
           </div>
