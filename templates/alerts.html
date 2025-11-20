@@ -56,6 +56,7 @@
     gap: 4px;
     background: #fff;
     color: #111827;
+    text-decoration: none;
   }
 
   .btn-primary {
@@ -127,17 +128,16 @@
     align-items: flex-end;
   }
 
-  /* 简单统计 */
+  /* 简要统计：全部竖直一列，适合手机 */
   .summary-row {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;   /* 关键：改成竖直排列 */
     gap: 8px;
     margin-bottom: 10px;
   }
 
   .summary-card {
-    flex: 1 1 120px;
-    min-width: 0;
+    width: 100%;
     background: #ffffff;
     border-radius: 10px;
     border: 1px solid #e5e7eb;
@@ -146,13 +146,13 @@
   }
 
   .summary-label {
-    font-size: 11px;
+    font-size: 12px;
     color: #6b7280;
     margin-bottom: 2px;
   }
 
   .summary-value {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     color: #111827;
   }
@@ -199,6 +199,7 @@
   .table-wrapper {
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   table {
@@ -353,7 +354,7 @@
     </form>
   </section>
 
-  <!-- 简要统计 -->
+  <!-- 简要统计（竖直一列） -->
   <section class="summary-row">
     <div class="summary-card">
       <div class="summary-label">匹配日期注单数</div>
