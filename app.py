@@ -1075,12 +1075,15 @@ def admin_alerts():
         if not b.number:
             continue
 
-        # 把排列算作同一粒号码
-        normalized_number = ''.join(sorted(b.number))
+        # ✅ 只有 Box / IBox 才合并排列；正字保持原号码
+        if b.type in ['Box', 'IBox']:
+            number_key = ''.join(sorted(b.number))
+        else:
+            number_key = b.number
 
-        # 一张单可能多个 market，我们按旧逻辑，把 win_amount 视为每个 market 都承担同一预计赔付
+        # 一张单可能多个 market，把 win_amount 视为每个 market 的预计赔付
         for m in (b.markets or []):
-            key = (target_ddmm, m, normalized_number)
+            key = (target_ddmm, m, number_key)
             g = groups[key]
             g["expected_total"] += Decimal(str(b.win_amount or "0"))
             g["bet_count"] += 1
