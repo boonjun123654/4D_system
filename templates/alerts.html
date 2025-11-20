@@ -71,9 +71,19 @@
     color: #4b5563;
   }
 
+  .btn[disabled] {
+    opacity: 0.6;
+    cursor: default;
+  }
+
   .btn-icon {
     font-size: 14px;
     line-height: 1;
+  }
+
+  .btn-sm {
+    padding: 4px 10px;
+    font-size: 12px;
   }
 
   /* 筛选卡片 */
@@ -128,10 +138,10 @@
     align-items: flex-end;
   }
 
-  /* 简要统计：全部竖直一列，适合手机 */
+  /* 简要统计：竖直一列，适合手机 */
   .summary-row {
     display: flex;
-    flex-direction: column;   /* 关键：改成竖直排列 */
+    flex-direction: column;
     gap: 8px;
     margin-bottom: 10px;
   }
@@ -187,6 +197,7 @@
     border: 1px solid #e5e7eb;
     padding: 10px 12px 8px;
     box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+    margin-top: 10px;
   }
 
   .table-title {
@@ -206,7 +217,7 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    min-width: 520px;
+    min-width: 640px;
   }
 
   thead th {
@@ -393,14 +404,25 @@
               <th>开奖日</th>
               <th>市场</th>
               <th>号码组合</th>
-              <th style="text-align:right;">预计总中奖 (RM)</th>
+              <th style="text-align:right;">头奖 (RM)</th>
+              <th style="text-align:right;">二奖 (RM)</th>
+              <th style="text-align:right;">三奖 (RM)</th>
               <th style="text-align:center;">下注笔数</th>
               <th style="text-align:center;">代理数</th>
+              <th style="text-align:center;">操作</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="alerts-tbody">
             {% for row in alerts %}
-            <tr>
+            <tr class="alert-row"
+                data-date="{{ row.date_ddmm }}"
+                data-market="{{ row.market }}"
+                data-number="{{ row.number }}"
+                data-first="{{ '%.2f'|format(row.expected_1st) }}"
+                data-second="{{ '%.2f'|format(row.expected_2nd) }}"
+                data-third="{{ '%.2f'|format(row.expected_3rd) }}"
+                data-bets="{{ row.bet_count }}"
+                data-agents="{{ row.agent_count }}">
               <td>
                 <span class="pill pill-small">{{ row.date_ddmm }}</span>
               </td>
@@ -411,15 +433,26 @@
                 <span class="pill pill-number">{{ row.number }}</span>
               </td>
               <td class="amount">
-                <span class="amount-strong {% if row.expected_total|float >= threshold|float * 2 %}danger{% endif %}">
-                  {{ "{:,.2f}".format(row.expected_total) }}
+                <span class="amount-strong">
+                  {{ "{:,.2f}".format(row.expected_1st) }}
                 </span>
+              </td>
+              <td class="amount">
+                {{ "{:,.2f}".format(row.expected_2nd) }}
+              </td>
+              <td class="amount">
+                {{ "{:,.2f}".format(row.expected_3rd) }}
               </td>
               <td style="text-align:center;">
                 <span class="pill">{{ row.bet_count }}</span>
               </td>
               <td style="text-align:center;">
                 <span class="pill">{{ row.agent_count }}</span>
+              </td>
+              <td style="text-align:center;">
+                <button type="button" class="btn btn-primary btn-sm confirm-btn">
+                  确认
+                </button>
               </td>
             </tr>
             {% endfor %}
@@ -433,5 +466,109 @@
       </div>
     {% endif %}
   </section>
+
+  <!-- 已确认区域 -->
+  <section class="table-card">
+    <h2 class="table-title">已确认号码</h2>
+    <div id="confirmed-empty" class="empty-state">
+      暂无已确认记录。
+    </div>
+    <div class="table-wrapper" id="confirmed-table-wrapper" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th>开奖日</th>
+            <th>市场</th>
+            <th>号码组合</th>
+            <th style="text-align:right;">头奖 (RM)</th>
+            <th style="text-align:right;">二奖 (RM)</th>
+            <th style="text-align:right;">三奖 (RM)</th>
+            <th style="text-align:center;">下注笔数</th>
+            <th style="text-align:center;">代理数</th>
+          </tr>
+        </thead>
+        <tbody id="confirmed-tbody"></tbody>
+      </table>
+    </div>
+  </section>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const confirmed = [];
+
+  const alertsBody = document.getElementById('alerts-tbody');
+  const confirmedBody = document.getElementById('confirmed-tbody');
+  const confirmedEmpty = document.getElementById('confirmed-empty');
+  const confirmedWrapper = document.getElementById('confirmed-table-wrapper');
+
+  function renderConfirmed() {
+    if (!confirmedBody) return;
+    confirmedBody.innerHTML = '';
+
+    if (!confirmed.length) {
+      confirmedWrapper.style.display = 'none';
+      confirmedEmpty.style.display = 'block';
+      return;
+    }
+
+    confirmedWrapper.style.display = 'block';
+    confirmedEmpty.style.display = 'none';
+
+    confirmed.forEach(function (r) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><span class="pill pill-small">' + r.date + '</span></td>' +
+        '<td><span class="pill pill-market">' + r.market + '</span></td>' +
+        '<td><span class="pill pill-number">' + r.number + '</span></td>' +
+        '<td class="amount"><span class="amount-strong">' + r.first + '</span></td>' +
+        '<td class="amount">' + r.second + '</td>' +
+        '<td class="amount">' + r.third + '</td>' +
+        '<td style="text-align:center;"><span class="pill">' + r.bets + '</span></td>' +
+        '<td style="text-align:center;"><span class="pill">' + r.agents + '</span></td>';
+      confirmedBody.appendChild(tr);
+    });
+  }
+
+  if (alertsBody) {
+    alertsBody.addEventListener('click', function (e) {
+      const btn = e.target.closest('.confirm-btn');
+      if (!btn) return;
+
+      const tr = btn.closest('.alert-row');
+      if (!tr) return;
+
+      const record = {
+        date: tr.dataset.date || '',
+        market: tr.dataset.market || '',
+        number: tr.dataset.number || '',
+        first: tr.dataset.first || '0.00',
+        second: tr.dataset.second || '0.00',
+        third: tr.dataset.third || '0.00',
+        bets: tr.dataset.bets || '0',
+        agents: tr.dataset.agents || '0'
+      };
+
+      // 防止重复添加：用 日期+市场+号码 做 key
+      const key = record.date + '|' + record.market + '|' + record.number;
+      const exists = confirmed.some(function (r) {
+        return (r.date + '|' + r.market + '|' + r.number) === key;
+      });
+      if (!exists) {
+        confirmed.push(record);
+        renderConfirmed();
+      }
+
+      // 按钮状态改成已确认
+      btn.textContent = '已确认';
+      btn.disabled = true;
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-ghost');
+    });
+  }
+
+  // 初始渲染（一般是空）
+  renderConfirmed();
+});
+</script>
 {% endblock %}
