@@ -1160,8 +1160,7 @@ def admin_alerts():
     # ===== 5. 过滤出“头+二+三 ≥ 阈值”的组合，整理成列表给模板 =====
     alerts = []
     for (ddmm, market, number_key), data in groups.items():
-        total_for_check = data["expected_1st"] + data["expected_2nd"] + data["expected_3rd"]
-        if total_for_check >= threshold:
+        if data["expected_1st"] >= threshold:
             alerts.append({
                 "date_ddmm": ddmm,
                 "market": market,
