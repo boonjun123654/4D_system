@@ -82,7 +82,8 @@
             {% if session.get('role') == 'admin' %}
                 <a href="/admin/agents">代理</a>
                 <a href="/admin/draw_input">上传开奖</a>
-                <a href="/ocr">上传开奖图像</a>
+                <!-- 新增：预计中奖提醒面板 -->
+                <a href="/admin/alerts">提醒面板</a>
             {% endif %}
         </div>
         {% endif %}
@@ -98,6 +99,3 @@
     {% block content %}{% endblock %}
 </body>
 </html>
-
-
-
