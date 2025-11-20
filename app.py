@@ -1064,47 +1064,120 @@ def admin_alerts():
     )
     bets = bets_q.all()
 
-    # ===== 4. 按【dd/mm + market + 号码模式】分组累加预计中奖 =====
+    # ===== 4. 按【dd/mm + market + 号码模式】分组累加“头/二/三奖”的预计赔付 =====
     groups = defaultdict(lambda: {
-        "expected_total": Decimal("0.00"),
+        "expected_1st": Decimal("0.00"),
+        "expected_2nd": Decimal("0.00"),
+        "expected_3rd": Decimal("0.00"),
         "bet_count": 0,
         "agents": set(),
     })
+
+    def get_combo_count_for_ibox(number: str) -> int:
+        # IBox 要按组合数摊薄（跟你下注页 JS 一样）
+        from collections import Counter
+        if not number or len(number) != 4 or not number.isdigit():
+            return 1
+        cnt = Counter(number)
+        pattern = sorted(cnt.values(), reverse=True)
+        if pattern == [4]:
+            return 1
+        if pattern == [3, 1]:
+            return 4
+        if pattern == [2, 2]:
+            return 6
+        if pattern == [2, 1, 1]:
+            return 12
+        if pattern == [1, 1, 1, 1]:
+            return 24
+        return 1
 
     for b in bets:
         if not b.number:
             continue
 
-        # ✅ 只有 Box / IBox 才合并排列；正字保持原号码
-        if b.type in ['Box', 'IBox']:
-            number_key = ''.join(sorted(b.number))
+        # Box / IBox 合并排列，正字保持原号码
+        if b.type in ["Box", "IBox"]:
+            number_key = "".join(sorted(b.number))
         else:
             number_key = b.number
 
-        # 一张单可能多个 market，把 win_amount 视为每个 market 的预计赔付
+        # IBox 要把赔率 / 组合数
+        ibox_factor = (
+            get_combo_count_for_ibox(b.number)
+            if b.type == "IBox" else 1
+        )
+
+        # 下注金额转 Decimal
+        stake_b = Decimal(str(b.b or 0))
+        stake_s = Decimal(str(b.s or 0))
+        stake_a = Decimal(str(b.a or 0))
+        stake_c = Decimal(str(b.c or 0))
+
         for m in (b.markets or []):
+            market_odds = odds.get(m, {})
+
+            def odd(table, prize):
+                return Decimal(str(market_odds.get(table, {}).get(prize, 0)))
+
+            # 头奖：B + S + A + C（A 只对头奖）
+            first_amt = (
+                stake_b * odd("B", "1st") +
+                stake_s * odd("S", "1st") +
+                stake_a * odd("A", "1st") +
+                stake_c * odd("C", "1st")
+            )
+
+            # 二奖：B + S + C（A 没有二奖）
+            second_amt = (
+                stake_b * odd("B", "2nd") +
+                stake_s * odd("S", "2nd") +
+                stake_c * odd("C", "2nd")
+            )
+
+            # 三奖：B + S + C
+            third_amt = (
+                stake_b * odd("B", "3rd") +
+                stake_s * odd("S", "3rd") +
+                stake_c * odd("C", "3rd")
+            )
+
+            # IBox 需要摊薄
+            if ibox_factor > 1:
+                first_amt /= ibox_factor
+                second_amt /= ibox_factor
+                third_amt /= ibox_factor
+
             key = (target_ddmm, m, number_key)
             g = groups[key]
-            g["expected_total"] += Decimal(str(b.win_amount or "0"))
+            g["expected_1st"] += first_amt
+            g["expected_2nd"] += second_amt
+            g["expected_3rd"] += third_amt
             g["bet_count"] += 1
             if b.agent_id:
                 g["agents"].add(b.agent_id)
 
-    # ===== 5. 过滤出超过阈值的组合，整理成列表给模板 =====
+    # ===== 5. 过滤出“头+二+三 ≥ 阈值”的组合，整理成列表给模板 =====
     alerts = []
     for (ddmm, market, number_key), data in groups.items():
-        if data["expected_total"] >= threshold:
+        total_for_check = data["expected_1st"] + data["expected_2nd"] + data["expected_3rd"]
+        if total_for_check >= threshold:
             alerts.append({
                 "date_ddmm": ddmm,
                 "market": market,
-                "number": number_key,  # 已经把排列合并后的号码
-                "expected_total": data["expected_total"],
+                "number": number_key,
+                "expected_1st": data["expected_1st"],
+                "expected_2nd": data["expected_2nd"],
+                "expected_3rd": data["expected_3rd"],
                 "bet_count": data["bet_count"],
                 "agent_count": len(data["agents"]),
             })
 
-    # 按预计总赔付从大到小排
-    alerts.sort(key=lambda x: x["expected_total"], reverse=True)
+    # 按“总预计赔付(头+二+三)”从大到小排序
+    alerts.sort(
+        key=lambda x: (x["expected_1st"] + x["expected_2nd"] + x["expected_3rd"]),
+        reverse=True,
+    )
 
     return render_template(
         "alerts.html",
