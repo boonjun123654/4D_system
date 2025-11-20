@@ -2,551 +2,389 @@
 
 {% block content %}
 <style>
-  :root {
-    --bg: #0f172a;
-    --bg-soft: #111827;
-    --bg-card: #020617;
-    --border-subtle: rgba(148, 163, 184, 0.35);
-    --accent: #22c55e;
-    --accent-soft: rgba(34, 197, 94, 0.12);
-    --accent-strong: #16a34a;
-    --danger: #f97373;
-    --text-main: #e5e7eb;
-    --text-soft: #94a3b8;
-    --text-mute: #64748b;
-    --text-strong: #f9fafb;
-    --radius-lg: 14px;
-    --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.8);
-    --shadow-subtle: 0 8px 25px rgba(15, 23, 42, 0.6);
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  /* ✅ 不再用 body，防止影响其他页面 */
+  /* 只影响提醒面板这个页面 */
   .alerts-page {
-    margin: 0;
-    padding: 24px;
+    max-width: 960px;
+    margin: 16px auto 24px;
+    padding: 0 12px 24px;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: radial-gradient(circle at top, #1f2937 0, #020617 45%, #000 100%);
-    color: var(--text-main);
-    min-height: calc(100vh - 60px); /* 大概扣掉导航高度 */
+    color: #111827;
   }
 
-  .alerts-page .page {
-    max-width: 1120px;
-    margin: 0 auto;
-  }
-
-  .page-header {
+  .alerts-header {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 24px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
   }
 
-  .page-title {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .page-title h1 {
-    margin: 0;
-    font-size: 1.5rem;
+  .alerts-title {
+    font-size: 20px;
     font-weight: 600;
-    letter-spacing: 0.02em;
-    color: var(--text-strong);
+    margin: 0;
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
-  .page-title h1 span.badge {
-    font-size: 0.75rem;
-    font-weight: 500;
+  .alerts-badge {
+    font-size: 11px;
     padding: 2px 8px;
     border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent-strong);
-    border: 1px solid rgba(34, 197, 94, 0.35);
+    background: #ecfdf3;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
   }
 
-  .page-title p {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--text-soft);
+  .alerts-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
+  .btn {
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fff;
+    color: #111827;
+  }
+
+  .btn-primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+  }
+
+  .btn-ghost {
+    border-color: #d1d5db;
+    background: #fff;
+    color: #4b5563;
+  }
+
+  .btn-icon {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  /* 筛选卡片 */
   .filter-card {
-    width: 100%;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.92));
-    border-radius: var(--radius-lg);
-    padding: 16px 18px 14px;
-    border: 1px solid var(--border-subtle);
-    box-shadow: var(--shadow-soft);
-    margin-bottom: 18px;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
   }
 
   .filter-row {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 12px;
+    gap: 8px;
   }
 
   .filter-group {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    min-width: 160px;
-    flex: 1 1 0;
+    flex: 1 1 140px;
+    min-width: 0;
   }
 
   .filter-label {
-    font-size: 0.75rem;
-    color: var(--text-mute);
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
+    font-size: 12px;
+    color: #6b7280;
   }
 
-  .filter-input {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  input[type="date"],
-  input[type="number"] {
+  .filter-input input[type="date"],
+  .filter-input input[type="number"] {
     width: 100%;
-    padding: 8px 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.4);
-    background: rgba(15, 23, 42, 0.9);
-    color: var(--text-strong);
-    font-size: 0.85rem;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 13px;
     outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   }
 
-  input[type="date"]:focus,
-  input[type="number"]:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
-    background: rgba(15, 23, 42, 0.98);
+  .filter-input input[type="date"]:focus,
+  .filter-input input[type="number"]:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
   }
 
   .filter-actions {
     display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: flex-end;
+  }
+
+  /* 简单统计 */
+  .summary-row {
+    display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    justify-content: flex-end;
-  }
-
-  .btn {
-    border-radius: 999px;
-    padding: 8px 16px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: transform 0.08s ease, box-shadow 0.1s ease, background 0.12s ease, opacity 0.12s ease;
-    white-space: nowrap;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: #022c22;
-    box-shadow: 0 12px 22px rgba(34, 197, 94, 0.35);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 35px rgba(34, 197, 94, 0.4);
-  }
-
-  .btn-ghost {
-    background: rgba(15, 23, 42, 0.9);
-    color: var(--text-soft);
-    border: 1px solid rgba(148, 163, 184, 0.35);
-  }
-
-  .btn-ghost:hover {
-    background: rgba(30, 64, 175, 0.22);
-    border-color: rgba(129, 140, 248, 0.75);
-  }
-
-  .btn-icon {
-    font-size: 1rem;
-    line-height: 1;
-  }
-
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-    margin-bottom: 18px;
-  }
-
-  .summary-card {
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
-    border-radius: var(--radius-lg);
-    padding: 12px 14px;
-    border: 1px solid var(--border-subtle);
-    box-shadow: var(--shadow-subtle);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .summary-title {
-    font-size: 0.75rem;
-    color: var(--text-mute);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .summary-value {
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: var(--text-strong);
-  }
-
-  .summary-hint {
-    font-size: 0.75rem;
-    color: var(--text-soft);
-  }
-
-  .summary-pill {
-    font-size: 0.7rem;
-    padding: 2px 7px;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.55);
-    color: var(--text-soft);
-    background: rgba(15, 23, 42, 0.85);
-  }
-
-  .summary-pill.danger {
-    border-color: rgba(248, 113, 113, 0.7);
-    color: #fecaca;
-    background: rgba(127, 29, 29, 0.45);
-  }
-
-  .summary-pill.accent {
-    border-color: rgba(52, 211, 153, 0.8);
-    color: #bbf7d0;
-    background: rgba(6, 95, 70, 0.5);
-  }
-
-  .table-card {
-    background: linear-gradient(150deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-subtle);
-    box-shadow: var(--shadow-soft);
-    padding: 14px 16px 12px;
-  }
-
-  .table-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 8px;
     margin-bottom: 10px;
   }
 
-  .table-header-left {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  .summary-card {
+    flex: 1 1 120px;
+    min-width: 0;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
   }
 
-  .table-header-title {
-    font-size: 0.9rem;
+  .summary-label {
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 2px;
+  }
+
+  .summary-value {
+    font-size: 16px;
     font-weight: 600;
-    color: var(--text-strong);
+    color: #111827;
   }
 
-  .table-header-sub {
-    font-size: 0.75rem;
-    color: var(--text-soft);
+  .summary-pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    margin-left: 6px;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+    background: #f9fafb;
+  }
+
+  .summary-pill.danger {
+    border-color: #f97373;
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+
+  .summary-pill.safe {
+    border-color: #22c55e;
+    background: #ecfdf3;
+    color: #15803d;
+  }
+
+  /* 表格卡片 */
+  .table-card {
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    padding: 10px 12px 8px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+  }
+
+  .table-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: #111827;
   }
 
   .table-wrapper {
     width: 100%;
     overflow-x: auto;
-    border-radius: 10px;
-    border: 1px solid rgba(30, 64, 175, 0.4);
-    background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98));
   }
 
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8rem;
-    min-width: 620px;
-  }
-
-  thead tr {
-    background: rgba(15, 23, 42, 0.95);
+    font-size: 13px;
+    min-width: 520px;
   }
 
   thead th {
     text-align: left;
-    padding: 9px 10px;
-    font-weight: 500;
-    color: var(--text-mute);
-    border-bottom: 1px solid rgba(30, 64, 175, 0.7);
+    padding: 6px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    color: #6b7280;
     white-space: nowrap;
   }
 
-  tbody tr {
-    border-bottom: 1px solid rgba(30, 64, 175, 0.28);
+  tbody td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f3f4f6;
+    white-space: nowrap;
   }
 
-  tbody tr:last-child {
-    border-bottom: none;
+  tbody tr:nth-child(odd) {
+    background: #ffffff;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #f9fafb;
   }
 
   tbody tr:hover {
-    background: radial-gradient(circle at left, rgba(30, 64, 175, 0.3), rgba(15, 23, 42, 0.98));
-  }
-
-  td {
-    padding: 8px 10px;
-    vertical-align: middle;
-    white-space: nowrap;
-  }
-
-  td.num-cell {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 0.82rem;
-    letter-spacing: 0.05em;
+    background: #e5f0ff;
   }
 
   td.amount {
     text-align: right;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-variant-numeric: tabular-nums;
   }
 
   .pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 32px;
-    padding: 2px 10px;
+    padding: 2px 8px;
+    font-size: 11px;
     border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    border: 1px solid rgba(148, 163, 184, 0.6);
-    color: var(--text-soft);
-    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    color: #374151;
   }
 
   .pill-market {
-    border-color: rgba(96, 165, 250, 0.9);
-    color: #bfdbfe;
-    background: rgba(30, 64, 175, 0.62);
-  }
-
-  .pill-date {
-    border-color: rgba(148, 163, 184, 0.7);
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
   }
 
   .pill-number {
-    border-color: rgba(251, 191, 36, 0.85);
-    color: #fef3c7;
-    background: radial-gradient(circle, rgba(251, 191, 36, 0.12), rgba(15, 23, 42, 0.9));
+    background: #fffbeb;
+    border-color: #facc15;
+    color: #92400e;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
   }
 
-  .pill-agents {
-    border-color: rgba(129, 140, 248, 0.85);
-    color: #c7d2fe;
-    background: rgba(30, 64, 175, 0.7);
-  }
-
-  .pill-bets {
-    border-color: rgba(148, 163, 184, 0.7);
-    background: rgba(15, 23, 42, 0.9);
+  .pill-small {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
   }
 
   .amount-strong {
-    color: #bbf7d0;
     font-weight: 600;
+    color: #065f46;
   }
 
   .amount-strong.danger {
-    color: #fecaca;
+    color: #b91c1c;
   }
 
   .empty-state {
-    padding: 22px 16px 18px;
+    padding: 18px 8px 10px;
     text-align: center;
-    color: var(--text-soft);
-    font-size: 0.85rem;
+    font-size: 13px;
+    color: #6b7280;
   }
 
   .empty-icon {
-    font-size: 1.6rem;
-    margin-bottom: 6px;
-  }
-
-  .empty-state strong {
-    color: var(--text-strong);
+    font-size: 20px;
+    margin-bottom: 4px;
   }
 
   @media (max-width: 640px) {
     .alerts-page {
-      padding: 12px;
+      padding: 0 10px 20px;
+    }
+    .alerts-header {
+      align-items: flex-start;
+    }
+    .alerts-actions {
+      width: 100%;
+      justify-content: flex-end;
     }
     .filter-card {
-      padding: 14px;
-    }
-    .summary-card {
-      padding: 10px 12px;
-    }
-    .table-card {
-      padding: 12px;
+      padding: 10px;
     }
   }
 </style>
 
 <div class="alerts-page">
-  <div class="page">
-    <header class="page-header">
-      <div class="page-title">
-        <h1>
-          预计中奖提醒面板
-          <span class="badge">Admin Only</span>
-        </h1>
-        <p>
-          显示指定开奖日中，预计总中奖金额
-          <strong>≥ {{ threshold }}</strong> 的号码。
-        </p>
-      </div>
-      <div>
-        <a href="{{ url_for('index') }}" class="btn btn-ghost">
-          <span class="btn-icon">←</span>
-          返回主页
-        </a>
-      </div>
-    </header>
+  <header class="alerts-header">
+    <h1 class="alerts-title">
+      预计中奖提醒面板
+      <span class="alerts-badge">Admin Only</span>
+    </h1>
+    <div class="alerts-actions">
+      <a href="{{ url_for('index') }}" class="btn btn-ghost">
+        <span class="btn-icon">←</span> 返回主页
+      </a>
+    </div>
+  </header>
 
-    <!-- 筛选区域 -->
-    <section class="filter-card">
-      <form method="get" action="{{ url_for('admin_alerts') }}">
-        <div class="filter-row">
-          <div class="filter-group">
-            <label class="filter-label">开奖日期 (Draw Date)</label>
-            <div class="filter-input">
-              <input
-                type="date"
-                name="date"
-                value="{{ selected_date }}"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="filter-group">
-            <label class="filter-label">提醒阈值 (Min Expected Payout)</label>
-            <div class="filter-input">
-              <input
-                type="number"
-                name="threshold"
-                min="0"
-                step="100"
-                value="{{ threshold }}"
-              />
-            </div>
-          </div>
-
-          <div class="filter-actions">
-            <button type="submit" class="btn btn-primary">
-              <span class="btn-icon">🔍</span>
-              查询
-            </button>
-            <a href="{{ url_for('admin_alerts') }}" class="btn btn-ghost">
-              <span class="btn-icon">⟳</span>
-              今天
-            </a>
+  <!-- 筛选区域 -->
+  <section class="filter-card">
+    <form method="get" action="{{ url_for('admin_alerts') }}">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label class="filter-label">开奖日期</label>
+          <div class="filter-input">
+            <input type="date" name="date" value="{{ selected_date }}" required>
           </div>
         </div>
-      </form>
-    </section>
 
-    <!-- 概览统计 -->
-    <section class="summary-grid">
-      <div class="summary-card">
-        <div class="summary-title">
-          今日注单 (匹配日期)
-          <span class="summary-pill">
-            {{ selected_date }}
-          </span>
-        </div>
-        <div class="summary-value">
-          {{ total_bets }}
-        </div>
-        <div class="summary-hint">
-          仅统计状态为 <strong>active / locked</strong> 且含当日开奖的注单。
-        </div>
-      </div>
-
-      <div class="summary-card">
-        <div class="summary-title">
-          风险号码 (≥ 阈值)
-          {% if alerts|length > 0 %}
-            <span class="summary-pill danger">
-              高风险
-            </span>
-          {% else %}
-            <span class="summary-pill accent">
-              安全范围内
-            </span>
-          {% endif %}
-        </div>
-        <div class="summary-value">
-          {{ alerts|length }}
-        </div>
-        <div class="summary-hint">
-          按「日期 + 市场 + 号码组合」汇总所有 <strong>win_amount</strong>。
-        </div>
-      </div>
-
-      <div class="summary-card">
-        <div class="summary-title">
-          当前提醒阈值
-          <span class="summary-pill">RM</span>
-        </div>
-        <div class="summary-value">
-          {{ "{:,.2f}".format(threshold|float) }}
-        </div>
-        <div class="summary-hint">
-          预计总中奖 ≥ 此数额的号码才会出现在下方列表。
-        </div>
-      </div>
-    </section>
-
-    <!-- 风险号码表格 -->
-    <section class="table-card">
-      <div class="table-header">
-        <div class="table-header-left">
-          <div class="table-header-title">
-            高预计赔付号码列表
-          </div>
-          <div class="table-header-sub">
-            按预计赔付金额从高到低排序；号码为排序后的 4 位组合（Box / IBox 合并计算）。
+        <div class="filter-group">
+          <label class="filter-label">提醒阈值 (RM)</label>
+          <div class="filter-input">
+            <input type="number" name="threshold" min="0" step="100" value="{{ threshold }}">
           </div>
         </div>
-      </div>
 
-      {% if alerts and alerts|length > 0 %}
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-primary">
+            <span class="btn-icon">🔍</span> 查询
+          </button>
+          <a href="{{ url_for('admin_alerts') }}" class="btn btn-ghost">
+            今天
+          </a>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <!-- 简要统计 -->
+  <section class="summary-row">
+    <div class="summary-card">
+      <div class="summary-label">匹配日期注单数</div>
+      <div class="summary-value">{{ total_bets }}</div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-label">
+        风险号码
+        {% if alerts|length > 0 %}
+          <span class="summary-pill danger">有风险</span>
+        {% else %}
+          <span class="summary-pill safe">安全</span>
+        {% endif %}
+      </div>
+      <div class="summary-value">{{ alerts|length }}</div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-label">当前提醒阈值</div>
+      <div class="summary-value">
+        RM {{ "{:,.2f}".format(threshold|float) }}
+      </div>
+    </div>
+  </section>
+
+  <!-- 风险号码表格 -->
+  <section class="table-card">
+    <h2 class="table-title">高预计赔付号码列表</h2>
+
+    {% if alerts and alerts|length > 0 %}
       <div class="table-wrapper">
         <table>
           <thead>
@@ -554,28 +392,22 @@
               <th>开奖日</th>
               <th>市场</th>
               <th>号码组合</th>
-              <th style="text-align:right;">预计总中奖金额 (RM)</th>
+              <th style="text-align:right;">预计总中奖 (RM)</th>
               <th style="text-align:center;">下注笔数</th>
-              <th style="text-align:center;">涉及代理数</th>
+              <th style="text-align:center;">代理数</th>
             </tr>
           </thead>
           <tbody>
             {% for row in alerts %}
             <tr>
               <td>
-                <span class="pill pill-date">
-                  {{ row.date_ddmm }}
-                </span>
+                <span class="pill pill-small">{{ row.date_ddmm }}</span>
               </td>
               <td>
-                <span class="pill pill-market">
-                  {{ row.market }}
-                </span>
+                <span class="pill pill-market">{{ row.market }}</span>
               </td>
-              <td class="num-cell">
-                <span class="pill pill-number">
-                  {{ row.number }}
-                </span>
+              <td>
+                <span class="pill pill-number">{{ row.number }}</span>
               </td>
               <td class="amount">
                 <span class="amount-strong {% if row.expected_total|float >= threshold|float * 2 %}danger{% endif %}">
@@ -583,30 +415,22 @@
                 </span>
               </td>
               <td style="text-align:center;">
-                <span class="pill pill-bets">
-                  {{ row.bet_count }}
-                </span>
+                <span class="pill">{{ row.bet_count }}</span>
               </td>
               <td style="text-align:center;">
-                <span class="pill pill-agents">
-                  {{ row.agent_count }}
-                </span>
+                <span class="pill">{{ row.agent_count }}</span>
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-      {% else %}
+    {% else %}
       <div class="empty-state">
         <div class="empty-icon">✅</div>
-        <div>
-          <strong>暂无超过提醒阈值的预计中奖号码。</strong><br />
-          当前选择日期下，所有号码的预计赔付均低于 RM {{ "{:,.2f}".format(threshold|float) }}。
-        </div>
+        <div>当前条件下，没有超过提醒阈值的号码。</div>
       </div>
-      {% endif %}
-    </section>
-  </div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
