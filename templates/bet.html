@@ -22,7 +22,7 @@
                 <th rowspan="2">#</th>
                 <th rowspan="2">下注号码</th>
 
-                <!-- ✅ B/S/A/C 表头下加入总控小格 -->
+                <!-- B/S/A/C/A1 表头下总控小格 -->
                 <th rowspan="2" style="text-align:center;width:70px">
                   B<br>
                   <input type="checkbox" id="fillB"
@@ -45,6 +45,12 @@
                   C<br>
                   <input type="checkbox" id="fillC"
                          onclick="copyAmountDown('C', this.checked)"
+                         style="width:16px;height:16px;">
+                </th>
+                <th rowspan="2" style="text-align:center;width:70px">
+                  A1<br>
+                  <input type="checkbox" id="fillA1"
+                         onclick="copyAmountDown('A1', this.checked)"
                          style="width:16px;height:16px;">
                 </th>
 
@@ -94,6 +100,9 @@
                 <td><input type="text" name="C{{ i }}" inputmode="decimal"
                            oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
                            style="width: 50px;"></td>
+                <td><input type="text" name="A1{{ i }}" inputmode="decimal"
+                           oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                           style="width: 50px;"></td>
 
                 {% for d in range(7) %}
                     <td><input type="checkbox" name="date{{ i }}_{{ d }}" class="date_col_{{ d }}" style="width:18px;height:18px;"></td>
@@ -127,7 +136,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="20" style="text-align:right; font-weight:bold;">
+                <td colspan="22" style="text-align:right; font-weight:bold;">
                     总下注金额：RM <span id="grand-total">0.00</span>
                 </td>
             </tr>
@@ -143,18 +152,20 @@
 <!-- JS 脚本 -->
 <script>
 const odds = {
-    "M": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
-    "P": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
-    "T": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
-    "S": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
-    "B": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
-    "K": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
-    "W": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}},
-    "H": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}},
-    "E": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}}
+    // M / P / T / S / B / K / W：A1 = 6800
+    "M": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}, "A1": {"1st": 6800}},
+    "P": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}, "A1": {"1st": 6800}},
+    "T": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}, "A1": {"1st": 6800}},
+    "S": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}, "A1": {"1st": 6800}},
+    "B": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}, "A1": {"1st": 6800}},
+    "K": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}, "A1": {"1st": 6800}},
+    "W": {"B": {"1st": 2750}, "S": {"1st": 3850}, "A": {"1st": 726}, "C": {"1st": 242}, "A1": {"1st": 6800}},
+    // H / E：A1 = 7140
+    "H": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}, "A1": {"1st": 7140}},
+    "E": {"B": {"1st": 3045}, "S": {"1st": 4095}, "A": {"1st": 740.25}, "C": {"1st": 246.75}, "A1": {"1st": 7140}}
 };
 
-// ✅ 勾选：把第1行的该列金额复制到第2~12行；取消：清空第2~12行该列金额
+// 勾选：把第1行的该列金额复制到第2~12行；取消：清空第2~12行该列金额
 function copyAmountDown(col, checked) {
   const first = document.querySelector(`input[name="${col}1"]`);
   const firstVal = first ? first.value : '';
@@ -168,17 +179,18 @@ function copyAmountDown(col, checked) {
   if (typeof updateTotals === 'function') { try { updateTotals(); } catch(_) {} }
 }
 
-function getHighestWin(markets, B, S, A, C, dateCount, type, number) {
+function getHighestWin(markets, B, S, A, C, A1, dateCount, type, number) {
     let max = 0;
     const comboFactor = (type === 'IBox') ? getCombinationCount(number) : 1;
     for (const m of ['H','E','M','P','T','S','B','K','W']) {
         if (!markets.includes(m)) continue;
         const o = odds[m];
         const payoutPerDraw =
-            B * (o.B?.['1st'] || 0) +
-            S * (o.S?.['1st'] || 0) +
-            A * (o.A?.['1st'] || 0) +
-            C * (o.C?.['1st'] || 0);
+            B  * (o.B?.['1st']  || 0) +
+            S  * (o.S?.['1st']  || 0) +
+            A  * (o.A?.['1st']  || 0) +
+            C  * (o.C?.['1st']  || 0) +
+            A1 * (o.A1?.['1st'] || 0);
         const totalPayout = payoutPerDraw / comboFactor;
         if (totalPayout > max) max = totalPayout;
     }
@@ -191,10 +203,11 @@ function updateTotals() {
         const number = document.querySelector(`input[name="number${i}"]`)?.value || '';
         const type = document.querySelector(`select[name="type${i}"]`)?.value || '正字';
 
-        const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
-        const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
-        const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
-        const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
+        const B  = parseFloat(document.querySelector(`input[name="B${i}"]`)  ?.value) || 0;
+        const S  = parseFloat(document.querySelector(`input[name="S${i}"]`)  ?.value) || 0;
+        const A  = parseFloat(document.querySelector(`input[name="A${i}"]`)  ?.value) || 0;
+        const C  = parseFloat(document.querySelector(`input[name="C${i}"]`)  ?.value) || 0;
+        const A1 = parseFloat(document.querySelector(`input[name="A1${i}"]`) ?.value) || 0;
 
         let dateCount = 0;
         const markets = [];
@@ -209,17 +222,18 @@ function updateTotals() {
 
         const comboCount = getCombinationCount(number);
         const factor = (type === 'Box') ? comboCount : 1;
-        const rowTotal = ((B + S + A + C) * factor) * dateCount * markets.length;
+        const rowTotal = ((B + S + A + C + A1) * factor) * dateCount * markets.length;
         document.querySelectorAll(".row-total")[i - 1].innerText = rowTotal.toFixed(2);
         grandTotal += rowTotal;
 
-        const win = getHighestWin(markets, B, S, A, C, dateCount, type, number);
+        const win = getHighestWin(markets, B, S, A, C, A1, dateCount, type, number);
         document.querySelector(`input[name="win_amount${i}"]`).value = win.toFixed(2);
         document.querySelectorAll(".win-amount")[i - 1].innerText = win.toFixed(2);
     }
     document.getElementById("grand-total").innerText = grandTotal.toFixed(2);
 }
-/* ✅ 按“日期 → 市场组合”分组，并合并相同号码的金额后显示 */
+
+// 按“日期 → 市场组合”分组，并合并相同号码的金额后显示
 function handleBet() {
     // —— 截止时间检查 —— 
     const malaysiaNow = new Date(
@@ -228,16 +242,16 @@ function handleBet() {
     const cutoff = new Date(malaysiaNow);
     cutoff.setHours(19, 0, 0, 0);
 
-    // 本页表头显示的 7 天日期标签 -> 统一转 dd/mm（两位）
+    // 表头 7 天日期标签 -> dd/mm
     const headerDateToDdmm = (dIndex) => {
         const raw = document.getElementById(`select_date_${dIndex}`)?.parentElement
-            .textContent.trim().split('\n').pop().trim();            // 例如 27/8
+            .textContent.trim().split('\n').pop().trim();
         if (!raw) return '';
-        const [d, m] = raw.split('/').map(n => n.padStart(2,'0'));   // -> 27 / 08
-        return `${d}/${m}`;                                          // 27/08
+        const [d, m] = raw.split('/').map(n => n.padStart(2,'0'));
+        return `${d}/${m}`;
     };
 
-    // 收集“页面中实际有号码的行”所选日期（用于截止检查）
+    // 收集有号码的行所选日期（用于截止检查）
     const pickedDatesSet = new Set();
     for (let i = 1; i <= 12; i++) {
         const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
@@ -253,23 +267,12 @@ function handleBet() {
         return false;
     }
 
-    // —— 统计总额 & 按【日期 → 市场组合】分组，并在组合内合并相同号码金额 ——  
+    // 统计总额 & 分组
     const MARKET_ORDER = ['M','P','T','S','B','K','W','H','E'];
     const fmt = (v) => (Number.isInteger(v) ? String(v) : (Math.round(v*100)/100).toFixed(2).replace(/\.00$/,''));
 
     let grandTotal = 0;
 
-    // 结构：
-    // grouped = {
-    //   '27/08': {
-    //      comboOrder: ['MKT','S','T'],
-    //      combos: {
-    //        'MKT': { order: ['1234|正字','3411|正字'], items: { '1234|正字': {num:'1234', type:'正字', B:1,S:0,A:0,C:0}, ... } },
-    //        'S':   {...},
-    //        'T':   {...}
-    //      }
-    //   }, ...
-    // }
     const grouped = {};
     const dateOrder = [];
 
@@ -293,16 +296,15 @@ function handleBet() {
         if (!num) continue;
 
         const type = document.querySelector(`select[name="type${i}"]`)?.value || '正字';
-        const B = parseFloat(document.querySelector(`input[name="B${i}"]`)?.value) || 0;
-        const S = parseFloat(document.querySelector(`input[name="S${i}"]`)?.value) || 0;
-        const A = parseFloat(document.querySelector(`input[name="A${i}"]`)?.value) || 0;
-        const C = parseFloat(document.querySelector(`input[name="C${i}"]`)?.value) || 0;
+        const B  = parseFloat(document.querySelector(`input[name="B${i}"]`)  ?.value) || 0;
+        const S  = parseFloat(document.querySelector(`input[name="S${i}"]`)  ?.value) || 0;
+        const A  = parseFloat(document.querySelector(`input[name="A${i}"]`)  ?.value) || 0;
+        const C  = parseFloat(document.querySelector(`input[name="C${i}"]`)  ?.value) || 0;
+        const A1 = parseFloat(document.querySelector(`input[name="A1${i}"]`) ?.value) || 0;
 
-        // 行总额（页面已有的 row-total 已经考虑 Box/IBox 的 factor 与日期/市场数）
         const rowTotal = parseFloat(document.querySelectorAll(".row-total")[i - 1].innerText) || 0;
         grandTotal += rowTotal;
 
-        // 该行的日期（dd/mm）与市场（按固定顺序）
         const rowDates = [];
         for (let d = 0; d < 7; d++) {
             const cb = document.querySelector(`input[name="date${i}_${d}"]`);
@@ -315,63 +317,32 @@ function handleBet() {
         }
         if (!rowDates.length || !rowMarkets.length) continue;
 
-        // 市场组合 key：例如 "MKT"、"S"、"T"
         const comboKey = rowMarkets.join('');
 
-        // 将该行分发到每个选中的日期的相应“市场组合”里，并合并相同号码（同一类型）
         for (const ddmm of rowDates) {
             const dObj = ensureDate(ddmm);
             const cObj = ensureCombo(dObj, comboKey);
 
             const itemKey = `${num}|${type}`;
             if (!cObj.items[itemKey]) {
-                cObj.items[itemKey] = { num, type, B:0, S:0, A:0, C:0 };
+                cObj.items[itemKey] = { num, type, B:0, S:0, A:0, C:0, A1:0 };
                 cObj.order.push(itemKey);
             }
-            cObj.items[itemKey].B += B;
-            cObj.items[itemKey].S += S;
-            cObj.items[itemKey].A += A;
-            cObj.items[itemKey].C += C;
+            cObj.items[itemKey].B  += B;
+            cObj.items[itemKey].S  += S;
+            cObj.items[itemKey].A  += A;
+            cObj.items[itemKey].C  += C;
+            cObj.items[itemKey].A1 += A1;
         }
     }
 
-    // —— 奖金上限检测（按 号码×单个市场×日期，不受“组合显示”影响） ——  
-    const MAX_WIN = 10000;
-    const betMap = {}; // { '6556_M_27/08': total_win }
-    for (let i = 1; i <= 12; i++) {
-        const num = document.querySelector(`input[name="number${i}"]`)?.value.trim();
-        if (!num) continue;
+    // —— 不再做 MAX_WIN 检查（删除 RM10000 弹框逻辑）——  
 
-        const win = parseFloat(document.querySelector(`input[name="win_amount${i}"]`)?.value) || 0;
-
-        const dds = [];
-        for (let d = 0; d < 7; d++) {
-            const cb = document.querySelector(`input[name="date${i}_${d}"]`);
-            if (cb?.checked) dds.push(headerDateToDdmm(d));
-        }
-        const mms = [];
-        for (const m of MARKET_ORDER) {
-            const cb = document.querySelector(`input[name="market${i}_${m}"]`);
-            if (cb?.checked) mms.push(m);
-        }
-
-        for (const d of dds) {
-            for (const m of mms) {
-                const key = `${num}_${m}_${d}`;
-                betMap[key] = (betMap[key] || 0) + win;
-                if (betMap[key] > MAX_WIN) {
-                    alert(`⚠️ ${num} 在市场 ${m}，日期 ${d} 的总中奖金额已超过 RM${MAX_WIN}，请修改下注`);
-                    return false;
-                }
-            }
-        }
-    }
-
-    // —— 二次确认 ——  
+    // 二次确认
     const confirmMsg = `下注总金额 = RM ${grandTotal.toFixed(2)}\n确认下注？`;
     if (!confirm(confirmMsg)) return false;
 
-    // —— 组装弹窗文本：按【日期 → 市场组合】，并在组合内按号码顺序输出合并后的金额 ——  
+    // 组装弹窗文本
     const formattedTotal = Number.isInteger(grandTotal) ? grandTotal : grandTotal.toFixed(2);
     const sections = [];
     for (const ddmm of dateOrder) {
@@ -387,20 +358,20 @@ function handleBet() {
             for (const itemKey of cObj.order) {
                 const it = cObj.items[itemKey];
                 const parts = [];
-                if (it.B) parts.push(`${fmt(it.B)}B`);
-                if (it.S) parts.push(`${fmt(it.S)}S`);
-                if (it.A) parts.push(`${fmt(it.A)}A`);
-                if (it.C) parts.push(`${fmt(it.C)}C`);
+                if (it.B)  parts.push(`${fmt(it.B)}B`);
+                if (it.S)  parts.push(`${fmt(it.S)}S`);
+                if (it.A)  parts.push(`${fmt(it.A)}A`);
+                if (it.C)  parts.push(`${fmt(it.C)}C`);
+                if (it.A1) parts.push(`${fmt(it.A1)}A1`);
                 const typeSuffix = (it.type && it.type !== '正字') ? ` (${it.type})` : '';
                 sections.push(`${it.num}=${parts.join(' ')}${typeSuffix}`);
             }
         }
-        sections.push(''); // 日期块之间空行
+        sections.push('');
     }
     sections.push(`GT=${formattedTotal}`);
     const finalText = sections.join('\n').replace(/\n{3,}/g, '\n\n');
 
-    // —— 弹窗（不阻止表单提交）——
     setTimeout(() => {
         localStorage.setItem("bet_popup", finalText);
         showBetPopup(finalText);
@@ -408,6 +379,7 @@ function handleBet() {
 
     return true;
 }
+
 function confirmResult() {
     const modal = document.getElementById("resultModal");
     if (modal) modal.remove();
@@ -500,7 +472,7 @@ function showBetPopup(text) {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
 }
 
-// ✅ 限制不合法日期和市场选择逻辑（与你旧版一致）
+// 限制不合法日期和市场选择逻辑
 function applyDateMarketRules() {
     const malaysiaNow = new Date(
         new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
@@ -573,7 +545,6 @@ function applyDateMarketRules() {
     }
 }
 
-// ✅ 页面加载监听
 function setupBetListeners() {
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', function () {
@@ -643,7 +614,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // 当总控勾着时，修改第1行金额自动同步
-    ['B','S','A','C'].forEach(col => {
+    ['B','S','A','C','A1'].forEach(col => {
       const master = document.getElementById('fill' + col);
       const first = document.querySelector(`input[name="${col}1"]`);
       if (first && master) {
@@ -656,19 +627,11 @@ document.addEventListener("DOMContentLoaded", function () {
     updateTotals();
 });
 
-// URL 参数提示
+// URL 参数提示：只保留 cutoff，不再提示 limit
 const params = new URLSearchParams(window.location.search);
 if (params.get("error") === "cutoff") {
     alert("⚠️ 今天的下注已截止（晚上 7 点后无法下注）");
     history.replaceState({}, document.title, location.pathname)
 }
-if (params.get("error") === "limit") {
-    const number = params.get("number") || '';
-    const market = params.get("market") || '';
-    const date = params.get("date") || '';
-    alert(`⚠️ ${date} 市场 ${market} 中号码 ${number} 的预计奖金已超过 RM10000，下注取消`);
-    history.replaceState({}, document.title, location.pathname);
-}
 </script>
 {% endblock %}
-
