@@ -53,6 +53,7 @@ Talisman(app,
 
 MAX_ATTEMPTS = 5
 LOCKOUT_MINUTES = 10
+MAX_EXPECTED_PAYOUT = Decimal("10000")
 
 db.init_app(app)
 with app.app_context():
@@ -120,6 +121,7 @@ def bet():
     date_today = now.date()
     results = []
 
+    # 管理员可以选代理，代理自身登录则不显示代理列表
     if session.get('role') == 'admin':
         agents = Agent4D.query.all()
     else:
@@ -130,15 +132,18 @@ def bet():
         today_str = now.strftime('%d/%m')
         selected_dates = set()
 
+        # 统计整张单中有勾选到的所有日期（用于截止时间判断）
         for i in range(1, 13):
             for d in range(7):
                 if request.form.get(f'date{i}_{d}') == 'on':
                     date_str = (date_today + timedelta(days=d)).strftime('%d/%m')
                     selected_dates.add(date_str)
 
+        # 今天且时间 >= 19:00 就不允许再下注今天
         if today_str in selected_dates and now.time() >= time(19, 0):
             return redirect('/bet?error=cutoff')
 
+        # 选择代理：管理员可选任意代理，代理账号只能用自己的
         if session.get('role') == 'admin':
             selected_agent_id = request.form.get('agent_id')
             agent = Agent4D.query.get(int(selected_agent_id)) if selected_agent_id else None
@@ -146,28 +151,36 @@ def bet():
             agent = Agent4D.query.filter_by(username=session['username']).first()
 
         agent_id = agent.username if agent else None
+
+        # 生成当日唯一订单号，并创建 orders_4d 记录（不在这里 commit）
         order_code = generate_order_code_and_create_order(agent_id)
 
-        def get_box_permutations(n):
+        def get_box_permutations(n: str):
             from itertools import permutations
-            return list(set([''.join(p) for p in permutations(n)]))
+            return list(set(''.join(p) for p in permutations(n)))
 
-        def get_comb_count(n):
+        def get_comb_count(n: str) -> int:
             digits = list(n)
             counts = {d: digits.count(d) for d in set(digits)}
             pattern = sorted(counts.values(), reverse=True)
-            if pattern == [4]: return 1
-            if pattern == [3, 1]: return 4
-            if pattern == [2, 2]: return 6
-            if pattern == [2, 1, 1]: return 12
-            if pattern == [1, 1, 1, 1]: return 24
+            if pattern == [4]:
+                return 1
+            if pattern == [3, 1]:
+                return 4
+            if pattern == [2, 2]:
+                return 6
+            if pattern == [2, 1, 1]:
+                return 12
+            if pattern == [1, 1, 1, 1]:
+                return 24
             return 1
 
+        # 逐行读取 1~12 行下注
         for i in range(1, 13):
             number = request.form.get(f'number{i}', '').strip()
             if not number or not number.isdigit():
                 continue
-            number = number.zfill(4)
+            number = number.zfill(4)  # 不足 4 位前面补 0
 
             bet_type = request.form.get(f'type{i}', '正字')
             win_amount = float(request.form.get(f"win_amount{i}") or 0)
@@ -176,82 +189,38 @@ def bet():
             A = float(request.form.get(f'A{i}', 0) or 0)
             C = float(request.form.get(f'C{i}', 0) or 0)
 
+            # 这一行勾选的日期（dd/mm）
             dates = [
                 (date_today + timedelta(days=d)).strftime("%d/%m")
                 for d in range(7)
                 if request.form.get(f'date{i}_{d}') == 'on'
             ]
 
+            # 这一行勾选的市场
             markets = [
-                m for m in ['M','P','T','S','B','K','W','H','E']
+                m for m in ['M', 'P', 'T', 'S', 'B', 'K', 'W', 'H', 'E']
                 if request.form.get(f'market{i}_{m}') == 'on'
             ]
 
+            # 没选日期或没选市场就跳过
             if not dates or not markets:
                 continue
 
-            box_permutations = get_box_permutations(number) if bet_type == 'Box' else [number]
-            # 检查用排序（用于过滤器匹配），但保存原始号码
-            normalized_number = ''.join(sorted(number)) if bet_type in ['Box', 'IBox'] else number
-            save_number = number  # 不管什么类型都保存原始号码
-
-            for market in markets:
-                for date_str in dates:
-                    if bet_type == '正字':
-                        # 检查数据库中是否有正字类型的相同号码
-                        existing_bets = db.session.query(FourDBet).filter(
-                            FourDBet.number == save_number,  # 只检查完全相同的号码
-                            FourDBet.type == '正字',  # 只查正字类型
-                            FourDBet.markets.any(market),
-                            FourDBet.dates.any(date_str),
-                            FourDBet.status == 'active'
-                        ).all()
-
-                        # 如果已有正字类型的相同号码，并且金额超过限制，则拦截
-                        if existing_bets:
-                            existing_total = sum(float(eb.win_amount) for eb in existing_bets)
-                            if existing_total + win_amount > 10000:
-                                return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
-
-                        # 检查数据库里是否有IBox/Box类型的号码
-                        all_perms = get_box_permutations(number)  # 获取所有排列组合
-                        existing_bets = db.session.query(FourDBet).filter(
-                            FourDBet.number.in_(all_perms),  # 检查所有排列组合
-                            FourDBet.type.in_(['Box', 'IBox']),  # 查找IBox/Box类型
-                            FourDBet.markets.any(market),
-                            FourDBet.dates.any(date_str),
-                            FourDBet.status == 'active'
-                        ).all()
-
-                        # 如果数据库中已有IBox/Box类型相同的号码组合，且金额超过限制，则拦截
-                        if existing_bets:
-                            existing_total = sum(float(eb.win_amount) for eb in existing_bets)
-                            if existing_total + win_amount > 10000:
-                                return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
-        
-                    # 对于IBox或Box类型下注，继续检查所有排列组合
-                    else:
-                        all_perms = get_box_permutations(number)  # 获取所有排列组合
-                        existing_bets = db.session.query(FourDBet).filter(
-                            FourDBet.number.in_(all_perms),
-                            FourDBet.markets.any(market),
-                            FourDBet.dates.any(date_str),
-                            FourDBet.status == 'active'
-                        ).all()
-
-                    existing_total = sum(float(eb.win_amount) for eb in existing_bets)
-
-                    if existing_total + win_amount > 10000:
-                        return redirect(f"/bet?error=limit&number={number}&market={market}&date={date_str}")
-
+            # Box 组合数量（影响总额计算），IBox 不在这里拆
             factor = get_comb_count(number) if bet_type == 'Box' else 1
+
+            # 总金额 = (B+S+A+C) × 组合数 × 日期数 × 市场数
             total = (B + S + A + C) * factor * len(dates) * len(markets)
 
+            # 不再做“超过 10000 阻止下注”的检查，直接入库
             bet = FourDBet(
                 agent_id=agent_id,
-                number=save_number,
+                number=number,        # 保存原始号码
                 type=bet_type,
-                b=B, s=S, a=A, c=C,
+                b=B,
+                s=S,
+                a=A,
+                c=C,
                 total=total,
                 win_amount=win_amount,
                 dates=dates,
@@ -264,7 +233,13 @@ def bet():
         db.session.commit()
         return redirect('/bet')
 
-    return render_template('bet.html', date_today=date_today, timedelta=timedelta, results=results, agents=agents)
+    return render_template(
+        'bet.html',
+        date_today=date_today,
+        timedelta=timedelta,
+        results=results,
+        agents=agents
+    )
 
 @app.route('/admin/process_winning', methods=['POST'])
 @login_required
@@ -1051,6 +1026,90 @@ def generate_order_code_and_create_order(agent_id: str) -> str:
     ))
     # 不在这里 commit，由调用方统一提交（保证整单原子性）
     return order_code
+
+@app.route('/admin/alerts')
+@login_required
+def admin_alerts():
+    # 只允许管理员查看
+    if session.get('role') != 'admin':
+        return redirect('/')
+
+    # ===== 1. 解析日期参数（YYYY-MM-DD），默认用马来西亚今天 =====
+    tz = timezone('Asia/Kuala_Lumpur')
+    today = datetime.now(tz).date()
+
+    date_str = request.args.get('date')
+    if date_str:
+        try:
+            selected_dt = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            selected_dt = today
+    else:
+        selected_dt = today
+
+    # 转成 bet.dates 使用的 dd/mm 形式
+    target_ddmm = selected_dt.strftime("%d/%m")
+
+    # ===== 2. 解析阈值（可选 ?threshold=20000），默认用 MAX_EXPECTED_PAYOUT =====
+    threshold_str = request.args.get('threshold')
+    try:
+        threshold = Decimal(threshold_str) if threshold_str else MAX_EXPECTED_PAYOUT
+    except Exception:
+        threshold = MAX_EXPECTED_PAYOUT
+
+    # ===== 3. 取出符合日期的 active/locked 注单 =====
+    bets_q = FourDBet.query.filter(
+        FourDBet.status.in_(["active", "locked"]),
+        FourDBet.dates.any(target_ddmm)
+    )
+    bets = bets_q.all()
+
+    # ===== 4. 按【dd/mm + market + 号码模式】分组累加预计中奖 =====
+    groups = defaultdict(lambda: {
+        "expected_total": Decimal("0.00"),
+        "bet_count": 0,
+        "agents": set(),
+    })
+
+    for b in bets:
+        if not b.number:
+            continue
+
+        # 把排列算作同一粒号码
+        normalized_number = ''.join(sorted(b.number))
+
+        # 一张单可能多个 market，我们按旧逻辑，把 win_amount 视为每个 market 都承担同一预计赔付
+        for m in (b.markets or []):
+            key = (target_ddmm, m, normalized_number)
+            g = groups[key]
+            g["expected_total"] += Decimal(str(b.win_amount or "0"))
+            g["bet_count"] += 1
+            if b.agent_id:
+                g["agents"].add(b.agent_id)
+
+    # ===== 5. 过滤出超过阈值的组合，整理成列表给模板 =====
+    alerts = []
+    for (ddmm, market, number_key), data in groups.items():
+        if data["expected_total"] >= threshold:
+            alerts.append({
+                "date_ddmm": ddmm,
+                "market": market,
+                "number": number_key,  # 已经把排列合并后的号码
+                "expected_total": data["expected_total"],
+                "bet_count": data["bet_count"],
+                "agent_count": len(data["agents"]),
+            })
+
+    # 按预计总赔付从大到小排
+    alerts.sort(key=lambda x: x["expected_total"], reverse=True)
+
+    return render_template(
+        "alerts.html",
+        alerts=alerts,
+        selected_date=selected_dt.strftime("%Y-%m-%d"),
+        threshold=str(threshold),
+        total_bets=len(bets),
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
